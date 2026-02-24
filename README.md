@@ -22,6 +22,58 @@ Unlike HTML, you cannot write raw text directly.
 - Whitespace
   - All whitespace is ignored.
 
+## Usage
+
+### Install
+
+```sh
+npm install onlytag
+```
+
+### Basic
+
+```ts
+import { tokenize, parse } from "onlytag"
+
+const input = `<Button .primary text="Click me" />`
+
+const tokens = tokenize(input)
+const ast = parse(tokens)
+```
+
+Output: `tokenize()`
+
+```json
+[
+  { "kind": "LT", "value": "<", "position": 0 },
+  { "kind": "IDENT", "value": "Button", "position": 1 },
+  { "kind": "DOT_IDENT", "value": ".primary", "position": 8 },
+  { "kind": "IDENT", "value": "text", "position": 17 },
+  { "kind": "EQUALS", "value": "=", "position": 21 },
+  { "kind": "JSON_VALUE", "value": "\"Click me\"", "position": 22 },
+  { "kind": "SLASH_GT", "value": "/>", "position": 33 },
+  { "kind": "EOF", "value": "", "position": 35 }
+]
+```
+
+Output: `parse()`
+
+```json
+{
+  "type": "document",
+  "children": [
+    {
+      "type": "element",
+      "tagName": "Button",
+      "decorations": [{ "name": "primary" }],
+      "attributes": { "text": "Click me" },
+      "children": [],
+      "selfClosing": true
+    }
+  ]
+}
+```
+
 ## Examples
 
 ```txt
