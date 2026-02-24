@@ -1,5 +1,5 @@
-import { z } from "zod";
-import type { JsonValue } from "./ast.js";
+import { z } from "zod"
+import type { JsonValue } from "./ast.js"
 
 /**
  * JSON文字列とJSON値を相互変換するcodec
@@ -8,20 +8,20 @@ import type { JsonValue } from "./ast.js";
 const JsonValueCodec = z.codec(z.string(), z.json(), {
   decode: (jsonString, ctx) => {
     try {
-      return JSON.parse(jsonString);
+      return JSON.parse(jsonString)
     } catch (error) {
-      const detail = error instanceof Error ? error.message : "invalid json";
+      const detail = error instanceof Error ? error.message : "invalid json"
       ctx.issues.push({
         code: "invalid_format",
         format: "json",
         input: jsonString,
         message: detail,
-      });
-      return z.NEVER;
+      })
+      return z.NEVER
     }
   },
   encode: (value) => JSON.stringify(value),
-});
+})
 
 /**
  * JSON文字列を安全にデコードする
@@ -29,7 +29,7 @@ const JsonValueCodec = z.codec(z.string(), z.json(), {
  * @returns codecのsafeDecode結果
  */
 export function decodeJsonString(jsonText: string) {
-  return JsonValueCodec.safeDecode(jsonText);
+  return JsonValueCodec.safeDecode(jsonText)
 }
 
 /**
@@ -38,5 +38,5 @@ export function decodeJsonString(jsonText: string) {
  * @returns JSON文字列
  */
 export function encodeJsonValue(value: JsonValue): string {
-  return JsonValueCodec.encode(value);
+  return JsonValueCodec.encode(value)
 }

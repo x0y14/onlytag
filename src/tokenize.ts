@@ -1,5 +1,5 @@
-import type { Token, TokenKind } from "./token.js";
-import { decodeJsonString } from "./utils.js";
+import type { Token, TokenKind } from "./token.js"
+import { decodeJsonString } from "./utils.js"
 
 // --- 内部ヘルパー ---
 
@@ -9,7 +9,7 @@ import { decodeJsonString } from "./utils.js";
  * @returns 空白文字であればtrue
  */
 function isWhitespace(ch: string): boolean {
-  return ch === " " || ch === "\t" || ch === "\n" || ch === "\r";
+  return ch === " " || ch === "\t" || ch === "\n" || ch === "\r"
 }
 
 /**
@@ -18,14 +18,14 @@ function isWhitespace(ch: string): boolean {
  * @returns 識別子文字であればtrue
  */
 function isIdentChar(ch: string): boolean {
-  const c = ch.charCodeAt(0);
+  const c = ch.charCodeAt(0)
   return (
     (c >= 65 && c <= 90) || // 英大文字
     (c >= 97 && c <= 122) || // 英小文字
     (c >= 48 && c <= 57) || // 数字
     c === 95 || // _
     c === 45 // -
-  );
+  )
 }
 
 /**
@@ -35,7 +35,7 @@ function isIdentChar(ch: string): boolean {
  * @throws {Error} 常にエラーをスローする
  */
 function tokenError(message: string, position: number): never {
-  throw new Error(`${message}, position=${position}`);
+  throw new Error(`${message}, position=${position}`)
 }
 
 /**
@@ -45,12 +45,12 @@ function tokenError(message: string, position: number): never {
  * @returns 境界であればtrue
  */
 function isJsonBoundary(input: string, end: number): boolean {
-  const len = input.length;
-  if (end >= len) return true;
-  const ch = input[end];
-  if (isWhitespace(ch) || ch === ">") return true;
-  if (ch === "/" && end + 1 < len && input[end + 1] === ">") return true;
-  return false;
+  const len = input.length
+  if (end >= len) return true
+  const ch = input[end]
+  if (isWhitespace(ch) || ch === ">") return true
+  if (ch === "/" && end + 1 < len && input[end + 1] === ">") return true
+  return false
 }
 
 /**
@@ -68,7 +68,7 @@ function canStartJsonValue(ch: string): boolean {
     ch === "t" ||
     ch === "f" ||
     ch === "n"
-  );
+  )
 }
 
 /**
@@ -78,15 +78,15 @@ function canStartJsonValue(ch: string): boolean {
  * @returns プレビュー文字列。入力末尾の場合は`"<eof>"`
  */
 function readLiteralPreview(input: string, pos: number): string {
-  const len = input.length;
-  let i = pos;
+  const len = input.length
+  let i = pos
   while (i < len) {
-    const ch = input[i];
-    if (isWhitespace(ch) || ch === "<" || ch === ">" || ch === "/" || ch === "=") break;
-    i++;
+    const ch = input[i]
+    if (isWhitespace(ch) || ch === "<" || ch === ">" || ch === "/" || ch === "=") break
+    i++
   }
-  if (i === pos) return "<eof>";
-  return input.slice(pos, i);
+  if (i === pos) return "<eof>"
+  return input.slice(pos, i)
 }
 
 /**
@@ -97,39 +97,39 @@ function readLiteralPreview(input: string, pos: number): string {
  * @throws {Error} JSON値が見つからない、または不正な場合
  */
 function readJsonValue(input: string, pos: number): [value: string, newPos: number] {
-  const len = input.length;
+  const len = input.length
 
   // 属性値の前にある空白を読み飛ばす
-  while (pos < len && isWhitespace(input[pos])) pos++;
+  while (pos < len && isWhitespace(input[pos])) pos++
 
   if (pos >= len) {
-    tokenError("missing attribute value: expected=<json-value>, actual=<eof>", pos);
+    tokenError("missing attribute value: expected=<json-value>, actual=<eof>", pos)
   }
 
   if (isJsonBoundary(input, pos)) {
-    const actual = input[pos] === "/" ? "/>" : input[pos];
-    tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos);
+    const actual = input[pos] === "/" ? "/>" : input[pos]
+    tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos)
   }
 
   if (!canStartJsonValue(input[pos])) {
-    tokenError(`invalid json value start: expected=<json-start>, actual=<${input[pos]}>`, pos);
+    tokenError(`invalid json value start: expected=<json-start>, actual=<${input[pos]}>`, pos)
   }
 
-  let lastDecodeIssue = "invalid json";
+  let lastDecodeIssue = "invalid json"
   for (let end = pos + 1; end <= len; end++) {
-    if (!isJsonBoundary(input, end)) continue;
-    const candidate = input.slice(pos, end);
-    const result = decodeJsonString(candidate);
+    if (!isJsonBoundary(input, end)) continue
+    const candidate = input.slice(pos, end)
+    const result = decodeJsonString(candidate)
     if (result.success) {
-      return [candidate, end];
+      return [candidate, end]
     }
-    lastDecodeIssue = result.error.issues[0]?.message ?? "invalid json";
+    lastDecodeIssue = result.error.issues[0]?.message ?? "invalid json"
   }
 
   tokenError(
     `invalid json attribute value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos)}>, detail=<${lastDecodeIssue}>`,
     pos,
-  );
+  )
 }
 
 // --- 公開API ---
@@ -141,95 +141,95 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
  * @throws {Error} 不正な文字やトークンが含まれる場合
  */
 export function tokenize(input: string): Token[] {
-  const tokens: Token[] = [];
-  const len = input.length;
-  let pos = 0;
-  let lastKind: TokenKind | null = null;
+  const tokens: Token[] = []
+  const len = input.length
+  let pos = 0
+  let lastKind: TokenKind | null = null
 
   function emit(kind: TokenKind, value: string, position: number) {
-    tokens.push({ kind, value, position });
-    lastKind = kind;
+    tokens.push({ kind, value, position })
+    lastKind = kind
   }
 
   while (true) {
     // 空白を読み飛ばす
-    while (pos < len && isWhitespace(input[pos])) pos++;
+    while (pos < len && isWhitespace(input[pos])) pos++
 
     // EQUALS の直後は JSON 値として読む
     if (lastKind === "EQUALS") {
-      const start = pos;
-      const [value, newPos] = readJsonValue(input, pos);
-      emit("JSON_VALUE", value, start);
-      pos = newPos;
-      continue;
+      const start = pos
+      const [value, newPos] = readJsonValue(input, pos)
+      emit("JSON_VALUE", value, start)
+      pos = newPos
+      continue
     }
 
-    if (pos >= len) break;
+    if (pos >= len) break
 
-    const start = pos;
+    const start = pos
 
-    const ch = input[pos];
+    const ch = input[pos]
 
     switch (ch) {
       case "<":
         if (pos + 1 < len && input[pos + 1] === "/") {
-          emit("LT_SLASH", "</", start);
-          pos += 2;
+          emit("LT_SLASH", "</", start)
+          pos += 2
         } else {
-          emit("LT", "<", start);
-          pos += 1;
+          emit("LT", "<", start)
+          pos += 1
         }
-        break;
+        break
 
       case ">":
-        emit("GT", ">", start);
-        pos += 1;
-        break;
+        emit("GT", ">", start)
+        pos += 1
+        break
 
       case "/":
         if (pos + 1 < len && input[pos + 1] === ">") {
-          emit("SLASH_GT", "/>", start);
-          pos += 2;
+          emit("SLASH_GT", "/>", start)
+          pos += 2
         } else {
-          const next = pos + 1 < len ? input[pos + 1] : "<eof>";
-          tokenError(`invalid slash token: expected=</>, actual=</${next}>`, pos);
+          const next = pos + 1 < len ? input[pos + 1] : "<eof>"
+          tokenError(`invalid slash token: expected=</>, actual=</${next}>`, pos)
         }
-        break;
+        break
 
       case "=":
-        emit("EQUALS", "=", start);
-        pos += 1;
-        break;
+        emit("EQUALS", "=", start)
+        pos += 1
+        break
 
       case ".":
-        pos += 1;
+        pos += 1
         if (pos < len && isIdentChar(input[pos])) {
-          const identStart = pos;
-          while (pos < len && isIdentChar(input[pos])) pos++;
-          emit("DOT_IDENT", "." + input.slice(identStart, pos), start);
+          const identStart = pos
+          while (pos < len && isIdentChar(input[pos])) pos++
+          emit("DOT_IDENT", "." + input.slice(identStart, pos), start)
         } else {
-          const actual = pos < len ? `.${input[pos]}` : ".<eof>";
+          const actual = pos < len ? `.${input[pos]}` : ".<eof>"
           tokenError(
             `invalid decoration token: expected=<.[A-Za-z0-9_-]+>, actual=<${actual}>`,
             start,
-          );
+          )
         }
-        break;
+        break
 
       default:
         if (isIdentChar(ch)) {
-          while (pos < len && isIdentChar(input[pos])) pos++;
-          emit("IDENT", input.slice(start, pos), start);
+          while (pos < len && isIdentChar(input[pos])) pos++
+          emit("IDENT", input.slice(start, pos), start)
         } else {
           tokenError(
             `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
             pos,
-          );
+          )
         }
-        break;
+        break
     }
   }
 
-  tokens.push({ kind: "EOF", value: "", position: pos });
-  return tokens;
+  tokens.push({ kind: "EOF", value: "", position: pos })
+  return tokens
 }

@@ -1,70 +1,70 @@
-import { test, assert } from "vitest";
-import { tokenize, parse } from "../src/index.js";
-import type { Token } from "../src/token.js";
+import { test, assert } from "vitest"
+import { tokenize, parse } from "../src/index.js"
+import type { Token } from "../src/token.js"
 
 function expectParserErrorWithPosition(input: string): void {
-  let error: unknown;
+  let error: unknown
   try {
-    parse(tokenize(input));
+    parse(tokenize(input))
   } catch (caught) {
-    error = caught;
+    error = caught
   }
 
   if (error === undefined) {
-    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>");
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
   }
 
-  assert.instanceOf(error, Error);
-  assert.match((error as Error).message, /position|pos|index|offset/i);
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
 }
 
 // 閉じタグ名が一致しない入力は失敗することを確認する
 test("parser error: mismatched closing tag fails", () => {
-  expectParserErrorWithPosition("<A></B>");
-});
+  expectParserErrorWithPosition("<A></B>")
+})
 
 // 余分な閉じタグのみの入力は失敗することを確認する
 test("parser error: stray closing tag fails", () => {
-  expectParserErrorWithPosition("</A>");
-});
+  expectParserErrorWithPosition("</A>")
+})
 
 // 閉じタグが欠落した入力は失敗することを確認する
 test("parser error: missing closing tag fails", () => {
-  expectParserErrorWithPosition("<A><B /></A");
-});
+  expectParserErrorWithPosition("<A><B /></A")
+})
 
 // ネスト構造で閉じタグが不一致の入力は失敗することを確認する
 test("parser error: nested closing tag mismatch fails", () => {
-  expectParserErrorWithPosition("<A><B></A></B>");
-});
+  expectParserErrorWithPosition("<A><B></A></B>")
+})
 
 // 自己閉じタグの後に余分な閉じタグがある入力は失敗することを確認する
 test("parser error: extra close tag after self-closing element fails", () => {
-  expectParserErrorWithPosition("<A /></A>");
-});
+  expectParserErrorWithPosition("<A /></A>")
+})
 
 // EOF到達時に閉じタグ不足なら失敗することを確認する
 test("parser error: eof before closing tag fails", () => {
-  expectParserErrorWithPosition("<A>");
-});
+  expectParserErrorWithPosition("<A>")
+})
 
 // 属性名の直後に等号がない入力は失敗することを確認する
 test("parser error: missing equals before decoration fails", () => {
-  let error: unknown;
+  let error: unknown
   try {
-    parse(tokenize("<A flag .hot />"));
+    parse(tokenize("<A flag .hot />"))
   } catch (caught) {
-    error = caught;
+    error = caught
   }
 
   if (error === undefined) {
-    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>");
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
   }
 
-  assert.instanceOf(error, Error);
-  assert.match((error as Error).message, /expected=<EQUALS>, actual=<DOT_IDENT>/);
-  assert.match((error as Error).message, /position|pos|index|offset/i);
-});
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /expected=<EQUALS>, actual=<DOT_IDENT>/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
 
 // 不正なJSON_VALUEトークンを含む場合にparse段で失敗することを確認する
 test("parser error: invalid json token payload fails in parse stage", () => {
@@ -76,20 +76,20 @@ test("parser error: invalid json token payload fails in parse stage", () => {
     { kind: "JSON_VALUE", value: "{", position: 10 },
     { kind: "SLASH_GT", value: "/>", position: 11 },
     { kind: "EOF", value: "", position: 13 },
-  ];
+  ]
 
-  let error: unknown;
+  let error: unknown
   try {
-    parse(tokens);
+    parse(tokens)
   } catch (caught) {
-    error = caught;
+    error = caught
   }
 
   if (error === undefined) {
-    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>");
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
   }
 
-  assert.instanceOf(error, Error);
-  assert.match((error as Error).message, /invalid json attribute/i);
-  assert.match((error as Error).message, /position|pos|index|offset/i);
-});
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /invalid json attribute/i)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})

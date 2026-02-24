@@ -1,12 +1,12 @@
-import { test, assert } from "vitest";
-import * as fc from "fast-check";
+import { test, assert } from "vitest"
+import * as fc from "fast-check"
 import {
   JsonValueSchema,
   DecorationSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
-} from "../src/ast.js";
-import { TokenSchema } from "../src/token.js";
+} from "../src/ast.js"
+import { TokenSchema } from "../src/token.js"
 
 // --- JsonValue関連 ---
 
@@ -20,17 +20,17 @@ const jsonValueArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
     fc.array(tie("value"), { maxLength: 3, size: "small" }),
     fc.dictionary(fc.string(), tie("value"), { maxKeys: 3, size: "small" }),
   ),
-})).value;
+})).value
 
 // 有効なJSON値は常にバリデーション成功することを確認する
 test("schema json value: accepts any valid json value", () => {
   fc.assert(
     fc.property(jsonValueArb, (value) => {
-      const result = JsonValueSchema.safeParse(value);
-      assert.isTrue(result.success);
+      const result = JsonValueSchema.safeParse(value)
+      assert.isTrue(result.success)
     }),
-  );
-});
+  )
+})
 
 // ネストした配列やオブジェクトでもバリデーション成功することを確認する
 test("schema json value: accepts nested arrays and objects", () => {
@@ -41,47 +41,47 @@ test("schema json value: accepts nested arrays and objects", () => {
       fc.array(tie("value"), { minLength: 1, maxLength: 2, size: "small" }),
       fc.dictionary(fc.string(), tie("value"), { minKeys: 1, maxKeys: 2, size: "small" }),
     ),
-  })).value;
+  })).value
 
   fc.assert(
     fc.property(nestedArb, (value) => {
-      const result = JsonValueSchema.safeParse(value);
-      assert.isTrue(result.success);
+      const result = JsonValueSchema.safeParse(value)
+      assert.isTrue(result.success)
     }),
-  );
-});
+  )
+})
 
 // --- Decoration関連 ---
 
-const validDecorationNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/);
+const validDecorationNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/)
 
 // 有効な装飾名は常にバリデーション成功することを確認する
 test("schema decoration: accepts valid names", () => {
   fc.assert(
     fc.property(validDecorationNameArb, (name) => {
-      const result = DecorationSchema.safeParse({ name });
-      assert.isTrue(result.success);
+      const result = DecorationSchema.safeParse({ name })
+      assert.isTrue(result.success)
     }),
-  );
-});
+  )
+})
 
 // 空文字列の装飾名はバリデーション失敗することを確認する
 test("schema decoration: rejects empty name", () => {
-  const result = DecorationSchema.safeParse({ name: "" });
-  assert.isFalse(result.success);
-});
+  const result = DecorationSchema.safeParse({ name: "" })
+  assert.isFalse(result.success)
+})
 
 // 不正文字を含む装飾名はバリデーション失敗することを確認する
 test("schema decoration: rejects names with invalid chars", () => {
-  const invalidCharArb = fc.stringMatching(/^[A-Za-z0-9_-]*[^A-Za-z0-9_-]+[A-Za-z0-9_-]*$/);
+  const invalidCharArb = fc.stringMatching(/^[A-Za-z0-9_-]*[^A-Za-z0-9_-]+[A-Za-z0-9_-]*$/)
 
   fc.assert(
     fc.property(invalidCharArb, (name) => {
-      const result = DecorationSchema.safeParse({ name });
-      assert.isFalse(result.success);
+      const result = DecorationSchema.safeParse({ name })
+      assert.isFalse(result.success)
     }),
-  );
-});
+  )
+})
 
 // --- Token関連 ---
 
@@ -95,7 +95,7 @@ const tokenKindValues = [
   "EQUALS",
   "JSON_VALUE",
   "EOF",
-] as const;
+] as const
 
 // kindとpositionが正しいToken構造はバリデーション成功することを確認する
 test("schema token: accepts valid token structure", () => {
@@ -105,12 +105,12 @@ test("schema token: accepts valid token structure", () => {
       fc.nat(),
       fc.string(),
       (kind, position, value) => {
-        const result = TokenSchema.safeParse({ kind, position, value });
-        assert.isTrue(result.success);
+        const result = TokenSchema.safeParse({ kind, position, value })
+        assert.isTrue(result.success)
       },
     ),
-  );
-});
+  )
+})
 
 // positionが負数のTokenはバリデーション失敗することを確認する
 test("schema token: rejects negative position", () => {
@@ -120,12 +120,12 @@ test("schema token: rejects negative position", () => {
       fc.integer({ max: -1 }),
       fc.string(),
       (kind, position, value) => {
-        const result = TokenSchema.safeParse({ kind, position, value });
-        assert.isFalse(result.success);
+        const result = TokenSchema.safeParse({ kind, position, value })
+        assert.isFalse(result.success)
       },
     ),
-  );
-});
+  )
+})
 
 // 不正なkindのTokenはバリデーション失敗することを確認する
 test("schema token: rejects invalid kind", () => {
@@ -135,16 +135,16 @@ test("schema token: rejects invalid kind", () => {
       fc.nat(),
       fc.string(),
       (kind, position, value) => {
-        const result = TokenSchema.safeParse({ kind, position, value });
-        assert.isFalse(result.success);
+        const result = TokenSchema.safeParse({ kind, position, value })
+        assert.isFalse(result.success)
       },
     ),
-  );
-});
+  )
+})
 
 // --- ElementNode関連 ---
 
-const tagNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/);
+const tagNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/)
 
 // letrec 内の再帰と組み合わせてもスタックオーバーフローしないよう、
 // 属性値はフラットなプリミティブのみにする
@@ -153,7 +153,7 @@ const flatJsonValueArb = fc.oneof(
   fc.double({ noNaN: true, noDefaultInfinity: true }),
   fc.boolean(),
   fc.constant(null),
-);
+)
 
 const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
   node: fc.record({
@@ -164,7 +164,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
     selfClosing: fc.constant(false),
   }),
-})).node;
+})).node
 
 const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
@@ -173,27 +173,27 @@ const selfClosingElementNodeArb = fc.record({
   attributes: fc.dictionary(fc.string(), flatJsonValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),
   selfClosing: fc.constant(true),
-});
+})
 
 // 有効なElementNodeはバリデーション成功することを確認する
 test("schema element node: accepts valid element node", () => {
   fc.assert(
     fc.property(elementNodeArb, (node) => {
-      const result = ElementNodeSchema.safeParse(node);
-      assert.isTrue(result.success);
+      const result = ElementNodeSchema.safeParse(node)
+      assert.isTrue(result.success)
     }),
-  );
-});
+  )
+})
 
 // selfClosing=trueかつchildren空配列のElementNodeが成功することを確認する
 test("schema element node: accepts self-closing node with empty children", () => {
   fc.assert(
     fc.property(selfClosingElementNodeArb, (node) => {
-      const result = ElementNodeSchema.safeParse(node);
-      assert.isTrue(result.success);
+      const result = ElementNodeSchema.safeParse(node)
+      assert.isTrue(result.success)
     }),
-  );
-});
+  )
+})
 
 // --- DocumentNode関連 ---
 
@@ -202,12 +202,12 @@ test("schema document node: accepts valid document node", () => {
   const documentNodeArb = fc.record({
     type: fc.constant("document" as const),
     children: fc.array(elementNodeArb, { maxLength: 2, size: "small" }),
-  });
+  })
 
   fc.assert(
     fc.property(documentNodeArb, (doc) => {
-      const result = DocumentNodeSchema.safeParse(doc);
-      assert.isTrue(result.success);
+      const result = DocumentNodeSchema.safeParse(doc)
+      assert.isTrue(result.success)
     }),
-  );
-});
+  )
+})
