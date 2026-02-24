@@ -207,3 +207,10 @@ test("parser: parses README Event example as multiple roots", () => {
   assert.equal(doc.children[1].decorations[1].name, "low_priority");
   assert.equal(doc.children[2].children[1].tagName, "Stacktrace");
 });
+
+// JSON属性の直後が/>でも構文解析できることを確認する
+test("parser: parses json attribute immediately followed by slash-gt", () => {
+  const doc = parse(tokenize('<A config={"k":1}/>'));
+  assert.equal(doc.children.length, 1);
+  assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 });
+});

@@ -1,5 +1,6 @@
 import type { Token, TokenKind } from "./token.js";
 import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js";
+import { z } from "zod";
 
 // --- 内部ヘルパー ---
 
@@ -26,6 +27,46 @@ function parseError(message: string, position: number): never {
   throw new Error(`${message}, position=${position}`);
 }
 
+const JsonValueCodec = z.codec(z.string(), z.json(), {
+  decode: (jsonString, ctx) => {
+    try {
+      return JSON.parse(jsonString);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "invalid json";
+      ctx.issues.push({
+        code: "invalid_format",
+        format: "json",
+        input: jsonString,
+        message: detail,
+      });
+      return z.NEVER;
+    }
+  },
+  encode: (value) => JSON.stringify(value),
+});
+
+function isJsonBoundary(input: string, end: number): boolean {
+  const len = input.length;
+  if (end >= len) return true;
+  const ch = input[end];
+  if (isWhitespace(ch) || ch === ">") return true;
+  if (ch === "/" && end + 1 < len && input[end + 1] === ">") return true;
+  return false;
+}
+
+function canStartJsonValue(ch: string): boolean {
+  return (
+    ch === '"' ||
+    ch === "{" ||
+    ch === "[" ||
+    ch === "-" ||
+    (ch >= "0" && ch <= "9") ||
+    ch === "t" ||
+    ch === "f" ||
+    ch === "n"
+  );
+}
+
 function readLiteralPreview(input: string, pos: number): string {
   const len = input.length;
   let i = pos;
@@ -48,96 +89,30 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
     tokenError("missing attribute value: expected=<json-value>, actual=<eof>", pos);
   }
 
-  const ch = input[pos];
-
-  // 文字列
-  if (ch === '"') {
-    let i = pos + 1;
-    while (i < len) {
-      if (input[i] === "\\") {
-        i += 2;
-        continue;
-      }
-      if (input[i] === '"') {
-        return [input.slice(pos, i + 1), i + 1];
-      }
-      i++;
-    }
-    tokenError("unterminated string literal: expected=<closing-quote>, actual=<eof>", pos);
+  if (isJsonBoundary(input, pos)) {
+    const actual = input[pos] === "/" ? "/>" : input[pos];
+    tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos);
   }
 
-  // オブジェクトまたは配列
-  if (ch === "{" || ch === "[") {
-    const open = ch;
-    const close = open === "{" ? "}" : "]";
-    let depth = 1;
-    let i = pos + 1;
-    let inString = false;
-    while (i < len && depth > 0) {
-      const c = input[i];
-      if (inString) {
-        if (c === "\\") {
-          i += 2;
-          continue;
-        }
-        if (c === '"') inString = false;
-      } else {
-        if (c === '"') inString = true;
-        else if (c === open) depth++;
-        else if (c === close) depth--;
-        else if (c === "{" && open === "[") {
-          // 配列中のオブジェクトを許容するため、ここでは何もしない
-        }
-      }
-      i++;
-    }
-    if (depth !== 0) {
-      tokenError(`unterminated json structure: expected=<${close}>, actual=<eof>`, pos);
-    }
-    return [input.slice(pos, i), i];
+  if (!canStartJsonValue(input[pos])) {
+    tokenError(`invalid json value start: expected=<json-start>, actual=<${input[pos]}>`, pos);
   }
 
-  // 数値（先頭が数字または-）
-  if (ch === "-" || (ch >= "0" && ch <= "9")) {
-    let i = pos;
-    while (i < len && /[0-9.eE+-]/.test(input[i])) i++;
-    return [input.slice(pos, i), i];
-  }
-
-  // trueリテラル
-  if (ch === "t") {
-    if (input.slice(pos, pos + 4) === "true") {
-      return ["true", pos + 4];
+  let lastDecodeIssue = "invalid json";
+  for (let end = pos + 1; end <= len; end++) {
+    if (!isJsonBoundary(input, end)) continue;
+    const candidate = input.slice(pos, end);
+    const result = JsonValueCodec.safeDecode(candidate);
+    if (result.success) {
+      return [candidate, end];
     }
-    tokenError(
-      `invalid json literal: expected=<true>, actual=<${readLiteralPreview(input, pos)}>`,
-      pos,
-    );
+    lastDecodeIssue = result.error.issues[0]?.message ?? "invalid json";
   }
 
-  // falseリテラル
-  if (ch === "f") {
-    if (input.slice(pos, pos + 5) === "false") {
-      return ["false", pos + 5];
-    }
-    tokenError(
-      `invalid json literal: expected=<false>, actual=<${readLiteralPreview(input, pos)}>`,
-      pos,
-    );
-  }
-
-  // nullリテラル
-  if (ch === "n") {
-    if (input.slice(pos, pos + 4) === "null") {
-      return ["null", pos + 4];
-    }
-    tokenError(
-      `invalid json literal: expected=<null>, actual=<${readLiteralPreview(input, pos)}>`,
-      pos,
-    );
-  }
-
-  tokenError(`missing attribute value: expected=<json-value>, actual=<${ch}>`, pos);
+  tokenError(
+    `invalid json attribute value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos)}>, detail=<${lastDecodeIssue}>`,
+    pos,
+  );
 }
 
 // --- 公開API ---
@@ -276,7 +251,17 @@ export function parse(tokens: Token[]): DocumentNode {
       const attrName = advance().value;
       expect("EQUALS");
       const jsonToken = expect("JSON_VALUE");
-      attributes[attrName] = JSON.parse(jsonToken.value);
+      const parsed = JsonValueCodec.safeDecode(jsonToken.value);
+      if (!parsed.success) {
+        const detail = parsed.error.issues[0]?.message ?? "invalid json";
+        parseError(
+          `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+          jsonToken.position,
+        );
+      }
+      // codecの双方向契約を維持するため、再エンコード可能であることを確認する
+      JsonValueCodec.encode(parsed.data as JsonValue);
+      attributes[attrName] = parsed.data as JsonValue;
     }
 
     // 自己閉じ

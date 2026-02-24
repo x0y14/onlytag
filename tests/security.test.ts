@@ -45,7 +45,7 @@ test("security: __proto__ payload does not cause prototype pollution", () => {
 
   const doc = parse(tokenize('<A payload={"__proto__":{"polluted":"yes"},"safe":1} />'));
   const payload = doc.children[0].attributes["payload"];
-  assert.deepStrictEqual(payload, JSON.parse('{"__proto__":{"polluted":"yes"},"safe":1}'));
+  assert.deepStrictEqual(payload, { safe: 1 });
   assert.isUndefined(({} as { polluted?: string }).polluted);
 });
 

@@ -146,3 +146,17 @@ test("tokenizer: tokenizes README AppLayout prefix", () => {
   assert.equal(tokens[tokens.length - 1].kind, "EOF");
   assert.isAtLeast(tokens.length, 10);
 });
+
+// JSON属性の終端を空白境界で正しく判定できることを確認する
+test("tokenizer: detects json boundary before next attribute", () => {
+  const tokens = tokenize('<A config={"k":1} next=2 />');
+  const values = tokens.filter((t) => t.kind === "JSON_VALUE").map((t) => t.value);
+  assert.deepStrictEqual(values, ['{"k":1}', "2"]);
+});
+
+// JSON属性の終端を/>境界で正しく判定できることを確認する
+test("tokenizer: detects json boundary before slash-gt", () => {
+  const tokens = tokenize('<A config={"k":1}/>');
+  const value = tokens.find((t) => t.kind === "JSON_VALUE");
+  assert.equal(value!.value, '{"k":1}');
+});

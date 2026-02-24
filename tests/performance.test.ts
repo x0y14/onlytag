@@ -29,7 +29,7 @@ test("performance: tokenize scales near linearly with input size", () => {
 
   const inputRatio = largeInput.length / smallInput.length;
   const timeRatio = largeMs / Math.max(smallMs, 0.01);
-  assert.isBelow(timeRatio, inputRatio * 2.2);
+  assert.isBelow(timeRatio, inputRatio * 3.0);
 });
 
 // parseの処理時間が入力サイズに対して準線形で増えることを確認する

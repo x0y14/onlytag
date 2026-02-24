@@ -61,3 +61,8 @@ test("tokenizer error: invalid false literal fails", () => {
 test("tokenizer error: invalid null literal fails", () => {
   expectTokenizerErrorWithPosition("<A ok=nul />");
 });
+
+// JSON値の直後に境界なしで識別子が続く入力は失敗することを確認する
+test("tokenizer error: missing boundary after json value fails", () => {
+  expectTokenizerErrorWithPosition('<A config={"k":1}next=2 />');
+});
