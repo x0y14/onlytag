@@ -1,7 +1,8 @@
 import { test, assert } from "vitest";
 import * as onlytag from "../src/index.js";
 
-test("公開API: 必須エクスポートが存在する", () => {
+// 公開APIの必須エクスポートが存在することを確認する
+test("api contract: exports required symbols", () => {
   assert.isFunction(onlytag.tokenize);
   assert.isFunction(onlytag.parse);
   assert.isDefined(onlytag.TokenSchema);
@@ -12,13 +13,15 @@ test("公開API: 必須エクスポートが存在する", () => {
   assert.isDefined(onlytag.DocumentNodeSchema);
 });
 
-test("公開API: tokenize(空文字列)は EOF を返す", () => {
+// 空文字列を tokenize した場合に EOF のみが返ることを確認する
+test("api contract: tokenize returns eof for empty input", () => {
   const tokens = onlytag.tokenize("");
   assert.equal(tokens.length, 1);
   assert.equal(tokens[0].kind, "EOF");
 });
 
-test("公開API: parse は document ノードを返す", () => {
+// parse の戻り値が document ノードであることを確認する
+test("api contract: parse returns document node", () => {
   const tokens = onlytag.tokenize("<A />");
   const doc = onlytag.parse(tokens);
   assert.equal(doc.type, "document");
@@ -26,7 +29,8 @@ test("公開API: parse は document ノードを返す", () => {
   assert.equal(doc.children[0].tagName, "A");
 });
 
-test("公開API: Schema は最小値を受理する", () => {
+// 公開されているスキーマが最小構成の値を受理することを確認する
+test("api contract: schemas accept minimal valid values", () => {
   const tokenResult = onlytag.TokenSchema.safeParse({
     kind: "EOF",
     value: "",

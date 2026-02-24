@@ -6,7 +6,7 @@ export const TokenKind = z.enum([
   "GT", // >
   "SLASH_GT", // />
   "IDENT", // タグ名・属性名
-  "DOT_IDENT", // .decoration（ドット含む）
+  "DOT_IDENT", // .デコレーション（ドット含む）
   "EQUALS", // =
   "JSON_VALUE", // JSON値の生文字列
   "EOF",

@@ -1,7 +1,7 @@
 import type { Token, TokenKind } from "./token.js";
 import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js";
 
-// --- internal helpers ---
+// --- 内部ヘルパー ---
 
 function isWhitespace(ch: string): boolean {
   return ch === " " || ch === "\t" || ch === "\n" || ch === "\r";
@@ -10,35 +10,47 @@ function isWhitespace(ch: string): boolean {
 function isIdentChar(ch: string): boolean {
   const c = ch.charCodeAt(0);
   return (
-    (c >= 65 && c <= 90) || // A-Z
-    (c >= 97 && c <= 122) || // a-z
-    (c >= 48 && c <= 57) || // 0-9
+    (c >= 65 && c <= 90) || // 英大文字
+    (c >= 97 && c <= 122) || // 英小文字
+    (c >= 48 && c <= 57) || // 数字
     c === 95 || // _
     c === 45 // -
   );
 }
 
 function tokenError(message: string, position: number): never {
-  throw new Error(`${message} (position: ${position})`);
+  throw new Error(`${message}, position=${position}`);
 }
 
 function parseError(message: string, position: number): never {
-  throw new Error(`${message} (position: ${position})`);
+  throw new Error(`${message}, position=${position}`);
+}
+
+function readLiteralPreview(input: string, pos: number): string {
+  const len = input.length;
+  let i = pos;
+  while (i < len) {
+    const ch = input[i];
+    if (isWhitespace(ch) || ch === "<" || ch === ">" || ch === "/" || ch === "=") break;
+    i++;
+  }
+  if (i === pos) return "<eof>";
+  return input.slice(pos, i);
 }
 
 function readJsonValue(input: string, pos: number): [value: string, newPos: number] {
   const len = input.length;
 
-  // skip whitespace before value
+  // 属性値の前にある空白を読み飛ばす
   while (pos < len && isWhitespace(input[pos])) pos++;
 
   if (pos >= len) {
-    tokenError("属性値が欠落しています", pos);
+    tokenError("missing attribute value: expected=<json-value>, actual=<eof>", pos);
   }
 
   const ch = input[pos];
 
-  // string
+  // 文字列
   if (ch === '"') {
     let i = pos + 1;
     while (i < len) {
@@ -51,10 +63,10 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
       }
       i++;
     }
-    tokenError("未終了の文字列", pos);
+    tokenError("unterminated string literal: expected=<closing-quote>, actual=<eof>", pos);
   }
 
-  // object or array
+  // オブジェクトまたは配列
   if (ch === "{" || ch === "[") {
     const open = ch;
     const close = open === "{" ? "}" : "]";
@@ -73,54 +85,62 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
         if (c === '"') inString = true;
         else if (c === open) depth++;
         else if (c === close) depth--;
-        // handle nested opposite brackets
         else if (c === "{" && open === "[") {
-          // need to handle nested objects inside arrays and vice versa
+          // 配列中のオブジェクトを許容するため、ここでは何もしない
         }
       }
       i++;
     }
     if (depth !== 0) {
-      tokenError("未終了のJSON構造", pos);
+      tokenError(`unterminated json structure: expected=<${close}>, actual=<eof>`, pos);
     }
     return [input.slice(pos, i), i];
   }
 
-  // number (starts with digit or -)
+  // 数値（先頭が数字または-）
   if (ch === "-" || (ch >= "0" && ch <= "9")) {
     let i = pos;
     while (i < len && /[0-9.eE+-]/.test(input[i])) i++;
     return [input.slice(pos, i), i];
   }
 
-  // true
+  // trueリテラル
   if (ch === "t") {
     if (input.slice(pos, pos + 4) === "true") {
       return ["true", pos + 4];
     }
-    tokenError("不正なJSON値", pos);
+    tokenError(
+      `invalid json literal: expected=<true>, actual=<${readLiteralPreview(input, pos)}>`,
+      pos,
+    );
   }
 
-  // false
+  // falseリテラル
   if (ch === "f") {
     if (input.slice(pos, pos + 5) === "false") {
       return ["false", pos + 5];
     }
-    tokenError("不正なJSON値", pos);
+    tokenError(
+      `invalid json literal: expected=<false>, actual=<${readLiteralPreview(input, pos)}>`,
+      pos,
+    );
   }
 
-  // null
+  // nullリテラル
   if (ch === "n") {
     if (input.slice(pos, pos + 4) === "null") {
       return ["null", pos + 4];
     }
-    tokenError("不正なJSON値", pos);
+    tokenError(
+      `invalid json literal: expected=<null>, actual=<${readLiteralPreview(input, pos)}>`,
+      pos,
+    );
   }
 
-  tokenError("属性値が欠落しています", pos);
+  tokenError(`missing attribute value: expected=<json-value>, actual=<${ch}>`, pos);
 }
 
-// --- public API ---
+// --- 公開API ---
 
 export function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
@@ -134,10 +154,10 @@ export function tokenize(input: string): Token[] {
   }
 
   while (true) {
-    // skip whitespace
+    // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++;
 
-    // after EQUALS, read JSON value
+    // EQUALS の直後は JSON 値として読む
     if (lastKind === "EQUALS") {
       const start = pos;
       const [value, newPos] = readJsonValue(input, pos);
@@ -173,7 +193,8 @@ export function tokenize(input: string): Token[] {
           emit("SLASH_GT", "/>", start);
           pos += 2;
         } else {
-          tokenError("不正な文字 '/'", pos);
+          const next = pos + 1 < len ? input[pos + 1] : "<eof>";
+          tokenError(`invalid slash token: expected=</>, actual=</${next}>`, pos);
         }
         break;
 
@@ -189,7 +210,11 @@ export function tokenize(input: string): Token[] {
           while (pos < len && isIdentChar(input[pos])) pos++;
           emit("DOT_IDENT", "." + input.slice(identStart, pos), start);
         } else {
-          tokenError("不正なdecoration", start);
+          const actual = pos < len ? `.${input[pos]}` : ".<eof>";
+          tokenError(
+            `invalid decoration token: expected=<.[A-Za-z0-9_-]+>, actual=<${actual}>`,
+            start,
+          );
         }
         break;
 
@@ -198,7 +223,10 @@ export function tokenize(input: string): Token[] {
           while (pos < len && isIdentChar(input[pos])) pos++;
           emit("IDENT", input.slice(start, pos), start);
         } else {
-          tokenError(`不正な文字 '${ch}'`, pos);
+          tokenError(
+            `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
+            pos,
+          );
         }
         break;
     }
@@ -223,7 +251,7 @@ export function parse(tokens: Token[]): DocumentNode {
     const tok = peek();
     if (tok.kind !== kind) {
       parseError(
-        `期待: ${kind}, 実際: ${tok.kind} ("${tok.value}")`,
+        `unexpected token: expected=<${kind}>, actual=<${tok.kind}>, value="${tok.value}"`,
         tok.position,
       );
     }
@@ -235,14 +263,14 @@ export function parse(tokens: Token[]): DocumentNode {
     const tagToken = expect("IDENT");
     const tagName = tagToken.value;
 
-    // decorations
+    // デコレーション
     const decorations: Decoration[] = [];
     while (peek().kind === "DOT_IDENT") {
       const deco = advance();
-      decorations.push({ name: deco.value.slice(1) }); // remove leading "."
+      decorations.push({ name: deco.value.slice(1) }); // 先頭のドットを除去する
     }
 
-    // attributes
+    // 属性
     const attributes: Record<string, JsonValue> = {};
     while (peek().kind === "IDENT") {
       const attrName = advance().value;
@@ -251,7 +279,7 @@ export function parse(tokens: Token[]): DocumentNode {
       attributes[attrName] = JSON.parse(jsonToken.value);
     }
 
-    // self-closing
+    // 自己閉じ
     if (peek().kind === "SLASH_GT") {
       advance();
       return {
@@ -266,22 +294,22 @@ export function parse(tokens: Token[]): DocumentNode {
 
     expect("GT");
 
-    // children
+    // 子要素
     const children: ElementNode[] = [];
     while (peek().kind === "LT") {
       children.push(parseElement());
     }
 
-    // closing tag
+    // 閉じタグ
     if (peek().kind === "EOF") {
-      parseError("閉じタグが不足しています", peek().position);
+      parseError(`missing closing tag: expected=</${tagName}>, actual=<eof>`, peek().position);
     }
 
     expect("LT_SLASH");
     const closeTag = expect("IDENT");
     if (closeTag.value !== tagName) {
       parseError(
-        `閉じタグ不一致: 期待 "${tagName}", 実際 "${closeTag.value}"`,
+        `mismatched closing tag: expected=</${tagName}>, actual=</${closeTag.value}>`,
         closeTag.position,
       );
     }
@@ -301,7 +329,10 @@ export function parse(tokens: Token[]): DocumentNode {
     const children: ElementNode[] = [];
     while (peek().kind !== "EOF") {
       if (peek().kind === "LT_SLASH") {
-        parseError("予期しない閉じタグ", peek().position);
+        parseError(
+          `unexpected closing tag at document root: expected=<element>, actual=<${peek().kind}>`,
+          peek().position,
+        );
       }
       children.push(parseElement());
     }

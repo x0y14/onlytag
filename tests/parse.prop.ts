@@ -36,7 +36,8 @@ const documentArb = fc
   })
   .map((elements) => elements.join(""));
 
-test("parse: 有効文法生成入力は DocumentNodeSchema を満たす", () => {
+// 有効文法の生成入力は DocumentNodeSchema を満たすことを確認する
+test("parse property: generated valid grammar satisfies document schema", () => {
   fc.assert(
     fc.property(documentArb, (input) => {
       const doc = parse(tokenize(input));
@@ -47,7 +48,8 @@ test("parse: 有効文法生成入力は DocumentNodeSchema を満たす", () =>
   );
 });
 
-test("parse: ネスト要素生成入力では子要素数が1以上になる", () => {
+// ネスト要素の生成入力では子要素数が1以上になることを確認する
+test("parse property: generated nested element has at least one child", () => {
   fc.assert(
     fc.property(nestedElementArb, (input) => {
       const doc = parse(tokenize(input));
@@ -58,7 +60,8 @@ test("parse: ネスト要素生成入力では子要素数が1以上になる", 
   );
 });
 
-test("parse: 任意文字列入力は成功か規定エラーになる", () => {
+// 任意文字列入力は成功するか、位置情報付きエラーになることを確認する
+test("parse property: arbitrary input succeeds or fails with position hint", () => {
   fc.assert(
     fc.property(fc.string({ maxLength: 160 }), (input) => {
       try {

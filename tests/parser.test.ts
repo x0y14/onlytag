@@ -1,7 +1,8 @@
 import { test, assert } from "vitest";
 import { tokenize, parse } from "../src/index.js";
 
-test("単一自己閉じタグ", () => {
+// 単一の自己閉じタグを解析できることを確認する
+test("parser: parses single self-closing tag", () => {
   const doc = parse(tokenize("<Br />"));
   assert.equal(doc.type, "document");
   assert.equal(doc.children.length, 1);
@@ -10,7 +11,8 @@ test("単一自己閉じタグ", () => {
   assert.equal(doc.children[0].children.length, 0);
 });
 
-test("空の開閉タグペア", () => {
+// 空の開閉タグペアを解析できることを確認する
+test("parser: parses empty open-close pair", () => {
   const doc = parse(tokenize("<Div></Div>"));
   assert.equal(doc.children.length, 1);
   assert.equal(doc.children[0].tagName, "Div");
@@ -18,7 +20,8 @@ test("空の開閉タグペア", () => {
   assert.equal(doc.children[0].children.length, 0);
 });
 
-test("ネスト要素", () => {
+// 親子のネスト要素を解析できることを確認する
+test("parser: parses nested elements", () => {
   const doc = parse(tokenize("<Parent><Child /></Parent>"));
   assert.equal(doc.children.length, 1);
   const parent = doc.children[0];
@@ -28,7 +31,8 @@ test("ネスト要素", () => {
   assert.equal(parent.children[0].selfClosing, true);
 });
 
-test("decoration解析", () => {
+// デコレーションを複数解析できることを確認する
+test("parser: parses decorations", () => {
   const doc = parse(tokenize("<Card .elevated .rounded_lg />"));
   const card = doc.children[0];
   assert.equal(card.decorations.length, 2);
@@ -36,27 +40,32 @@ test("decoration解析", () => {
   assert.equal(card.decorations[1].name, "rounded_lg");
 });
 
-test("文字列属性", () => {
+// 文字列属性を解析できることを確認する
+test("parser: parses string attribute", () => {
   const doc = parse(tokenize('<Identity name="Lumina" />'));
   assert.equal(doc.children[0].attributes["name"], "Lumina");
 });
 
-test("数値属性", () => {
+// 数値属性を解析できることを確認する
+test("parser: parses numeric attribute", () => {
   const doc = parse(tokenize("<Identity level=42 />"));
   assert.equal(doc.children[0].attributes["level"], 42);
 });
 
-test("boolean属性", () => {
+// 真偽値属性を解析できることを確認する
+test("parser: parses boolean attribute", () => {
   const doc = parse(tokenize("<Payload success=true />"));
   assert.equal(doc.children[0].attributes["success"], true);
 });
 
-test("null属性", () => {
+// null属性を解析できることを確認する
+test("parser: parses null attribute", () => {
   const doc = parse(tokenize("<Skills passive=null />"));
   assert.equal(doc.children[0].attributes["passive"], null);
 });
 
-test("オブジェクト属性", () => {
+// オブジェクト属性を解析できることを確認する
+test("parser: parses object attribute", () => {
   const doc = parse(tokenize('<Stats base={"hp": 1500, "mp": 800} />'));
   assert.deepStrictEqual(doc.children[0].attributes["base"], {
     hp: 1500,
@@ -64,12 +73,14 @@ test("オブジェクト属性", () => {
   });
 });
 
-test("配列属性", () => {
+// 配列属性を解析できることを確認する
+test("parser: parses array attribute", () => {
   const doc = parse(tokenize("<Stats modifiers=[1.2, 0.9, 1.05] />"));
   assert.deepStrictEqual(doc.children[0].attributes["modifiers"], [1.2, 0.9, 1.05]);
 });
 
-test("複数ルート要素", () => {
+// 複数のルート要素を解析できることを確認する
+test("parser: parses multiple root elements", () => {
   const doc = parse(tokenize("<A /><B /><C />"));
   assert.equal(doc.children.length, 3);
   assert.equal(doc.children[0].tagName, "A");
@@ -77,7 +88,8 @@ test("複数ルート要素", () => {
   assert.equal(doc.children[2].tagName, "C");
 });
 
-test("READMEのCharacter完全例", () => {
+// READMEのCharacter完全例を解析できることを確認する
+test("parser: parses complete README Character example", () => {
   const input = `
     <Character .hero .rare_ssr>
       <Identity name="Lumina" level=42 />
@@ -134,13 +146,15 @@ test("READMEのCharacter完全例", () => {
   assert.equal(skills.attributes["passive"], null);
 });
 
-test("空入力 → 空document", () => {
+// 空入力から空のdocumentを返すことを確認する
+test("parser: returns empty document for empty input", () => {
   const doc = parse(tokenize(""));
   assert.equal(doc.type, "document");
   assert.equal(doc.children.length, 0);
 });
 
-test("識別子の許可文字（タグ・属性・decoration）", () => {
+// タグ名・属性名・デコレーション名の許可文字を受理することを確認する
+test("parser: accepts allowed identifier characters", () => {
   const doc = parse(tokenize('<A_1-b .d_2-e k_3-f={"x":1} />'));
   assert.equal(doc.children.length, 1);
   const node = doc.children[0];
@@ -149,12 +163,14 @@ test("識別子の許可文字（タグ・属性・decoration）", () => {
   assert.deepStrictEqual(node.attributes["k_3-f"], { x: 1 });
 });
 
-test("数値表現（指数表記）", () => {
+// 指数表記の数値を解析できることを確認する
+test("parser: parses scientific notation number", () => {
   const doc = parse(tokenize("<Metric value=1e3 />"));
   assert.equal(doc.children[0].attributes["value"], 1000);
 });
 
-test("複数ルート + 空白混在", () => {
+// 空白が混在した複数ルート入力を解析できることを確認する
+test("parser: parses multiple roots with mixed whitespace", () => {
   const input = `
     <A />
     <B>
@@ -168,7 +184,8 @@ test("複数ルート + 空白混在", () => {
   assert.equal(doc.children[1].children[0].tagName, "C");
 });
 
-test("README Event例を複数ルートで解析", () => {
+// READMEのEvent例を複数ルートとして解析できることを確認する
+test("parser: parses README Event example as multiple roots", () => {
   const input = `
     <Event .info timestamp=1710000000>
       <Payload type="login" success=true />

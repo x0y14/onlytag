@@ -10,45 +10,54 @@ function expectTokenizerErrorWithPosition(input: string): void {
   }
 
   if (error === undefined) {
-    assert.fail("tokenize は不正入力で Error を投げるべき");
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>");
   }
 
   assert.instanceOf(error, Error);
   assert.match((error as Error).message, /position|pos|index|offset/i);
 }
 
-test("不正文字を含むタグ名は失敗", () => {
+// タグ名に不正文字を含む入力は失敗することを確認する
+test("tokenizer error: invalid character in tag name fails", () => {
   expectTokenizerErrorWithPosition("<A@ />");
 });
 
-test("未終了の文字列属性は失敗", () => {
+// 未終了の文字列属性は失敗することを確認する
+test("tokenizer error: unterminated string attribute fails", () => {
   expectTokenizerErrorWithPosition('<A name="Lumina />');
 });
 
-test("未終了のJSONオブジェクト属性は失敗", () => {
+// 未終了のJSONオブジェクト属性は失敗することを確認する
+test("tokenizer error: unterminated json object attribute fails", () => {
   expectTokenizerErrorWithPosition('<A data={"hp": 100 />');
 });
 
-test("属性値が欠落している場合は失敗", () => {
+// 属性値が欠落している場合は失敗することを確認する
+test("tokenizer error: missing attribute value fails", () => {
   expectTokenizerErrorWithPosition("<A level= />");
 });
 
-test("不正文字を含むdecorationは失敗", () => {
+// デコレーションに不正文字を含む入力は失敗することを確認する
+test("tokenizer error: invalid character in decoration fails", () => {
   expectTokenizerErrorWithPosition("<A .bad! />");
 });
 
-test("属性値が入力終端で欠落している場合は失敗", () => {
+// 入力終端まで属性値がない場合は失敗することを確認する
+test("tokenizer error: missing attribute value at eof fails", () => {
   expectTokenizerErrorWithPosition("<A level=   ");
 });
 
-test("不正なtrueリテラルは失敗", () => {
+// 不正なtrueリテラルは失敗することを確認する
+test("tokenizer error: invalid true literal fails", () => {
   expectTokenizerErrorWithPosition("<A ok=tru />");
 });
 
-test("不正なfalseリテラルは失敗", () => {
+// 不正なfalseリテラルは失敗することを確認する
+test("tokenizer error: invalid false literal fails", () => {
   expectTokenizerErrorWithPosition("<A ok=fals />");
 });
 
-test("不正なnullリテラルは失敗", () => {
+// 不正なnullリテラルは失敗することを確認する
+test("tokenizer error: invalid null literal fails", () => {
   expectTokenizerErrorWithPosition("<A ok=nul />");
 });

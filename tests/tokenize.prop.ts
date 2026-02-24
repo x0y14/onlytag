@@ -22,7 +22,8 @@ const selfClosingTagInputArb = fc
     return `${parts.join(" ")} />`;
   });
 
-test("tokenize: 任意文字列入力で無限ループせず、成功か規定エラーになる", () => {
+// 任意文字列入力が成功か位置情報付きエラーになることを確認する
+test("tokenize property: arbitrary input succeeds or fails with position hint", () => {
   fc.assert(
     fc.property(fc.string({ maxLength: 120 }), (input) => {
       try {
@@ -39,7 +40,8 @@ test("tokenize: 任意文字列入力で無限ループせず、成功か規定�
   );
 });
 
-test("tokenize: 有効な自己閉じタグ生成入力は常に EOF で終わる", () => {
+// 有効な自己閉じタグ生成入力は必ずEOFで終わることを確認する
+test("tokenize property: generated self-closing tags always end with eof", () => {
   fc.assert(
     fc.property(selfClosingTagInputArb, (input) => {
       const tokens = tokenize(input);
@@ -51,7 +53,8 @@ test("tokenize: 有効な自己閉じタグ生成入力は常に EOF で終わ�
   );
 });
 
-test("tokenize: 空白差分はトークン列の kind/value を変えない", () => {
+// 空白差分がトークン列のkind/valueを変えないことを確認する
+test("tokenize property: whitespace variation preserves token kinds and values", () => {
   fc.assert(
     fc.property(identArb, identArb, fc.integer({ min: -9, max: 9 }), (tag, attr, value) => {
       const compact = `<${tag} ${attr}=${value} />`;

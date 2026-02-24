@@ -8,7 +8,7 @@ import {
 } from "../src/ast.js";
 import { TokenSchema } from "../src/token.js";
 
-// --- JsonValue ---
+// --- JsonValue関連 ---
 
 const jsonValueArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
   value: fc.oneof(
@@ -22,7 +22,8 @@ const jsonValueArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
   ),
 })).value;
 
-test("JsonValueSchema: 有効なJSON値は常にバリデーション成功", () => {
+// 有効なJSON値は常にバリデーション成功することを確認する
+test("schema json value: accepts any valid json value", () => {
   fc.assert(
     fc.property(jsonValueArb, (value) => {
       const result = JsonValueSchema.safeParse(value);
@@ -31,7 +32,8 @@ test("JsonValueSchema: 有効なJSON値は常にバリデーション成功", ()
   );
 });
 
-test("JsonValueSchema: ネストされた配列・オブジェクトでもバリデーション成功", () => {
+// ネストした配列やオブジェクトでもバリデーション成功することを確認する
+test("schema json value: accepts nested arrays and objects", () => {
   const nestedArb = fc.letrec((tie) => ({
     value: fc.oneof(
       fc.string(),
@@ -49,11 +51,12 @@ test("JsonValueSchema: ネストされた配列・オブジェクトでもバリ
   );
 });
 
-// --- Decoration ---
+// --- Decoration関連 ---
 
 const validDecorationNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/);
 
-test("DecorationSchema: 有効な名前は常にバリデーション成功", () => {
+// 有効な装飾名は常にバリデーション成功することを確認する
+test("schema decoration: accepts valid names", () => {
   fc.assert(
     fc.property(validDecorationNameArb, (name) => {
       const result = DecorationSchema.safeParse({ name });
@@ -62,12 +65,14 @@ test("DecorationSchema: 有効な名前は常にバリデーション成功", ()
   );
 });
 
-test("DecorationSchema: 空文字列はバリデーション失敗", () => {
+// 空文字列の装飾名はバリデーション失敗することを確認する
+test("schema decoration: rejects empty name", () => {
   const result = DecorationSchema.safeParse({ name: "" });
   assert.isFalse(result.success);
 });
 
-test("DecorationSchema: 不正文字を含む名前はバリデーション失敗", () => {
+// 不正文字を含む装飾名はバリデーション失敗することを確認する
+test("schema decoration: rejects names with invalid chars", () => {
   const invalidCharArb = fc.stringMatching(/^[A-Za-z0-9_-]*[^A-Za-z0-9_-]+[A-Za-z0-9_-]*$/);
 
   fc.assert(
@@ -78,7 +83,7 @@ test("DecorationSchema: 不正文字を含む名前はバリデーション失�
   );
 });
 
-// --- Token ---
+// --- Token関連 ---
 
 const tokenKindValues = [
   "LT",
@@ -92,7 +97,8 @@ const tokenKindValues = [
   "EOF",
 ] as const;
 
-test("TokenSchema: 有効なToken（正しいkind・非負position・任意value）はバリデーション成功", () => {
+// kindとpositionが正しいToken構造はバリデーション成功することを確認する
+test("schema token: accepts valid token structure", () => {
   fc.assert(
     fc.property(
       fc.constantFrom(...tokenKindValues),
@@ -106,7 +112,8 @@ test("TokenSchema: 有効なToken（正しいkind・非負position・任意value
   );
 });
 
-test("TokenSchema: 負のpositionはバリデーション失敗", () => {
+// positionが負数のTokenはバリデーション失敗することを確認する
+test("schema token: rejects negative position", () => {
   fc.assert(
     fc.property(
       fc.constantFrom(...tokenKindValues),
@@ -120,7 +127,8 @@ test("TokenSchema: 負のpositionはバリデーション失敗", () => {
   );
 });
 
-test("TokenSchema: 不正なkindはバリデーション失敗", () => {
+// 不正なkindのTokenはバリデーション失敗することを確認する
+test("schema token: rejects invalid kind", () => {
   fc.assert(
     fc.property(
       fc.string().filter((s) => !(tokenKindValues as readonly string[]).includes(s)),
@@ -134,12 +142,12 @@ test("TokenSchema: 不正なkindはバリデーション失敗", () => {
   );
 });
 
-// --- ElementNode ---
+// --- ElementNode関連 ---
 
 const tagNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/);
 
 // letrec 内の再帰と組み合わせてもスタックオーバーフローしないよう、
-// attributes の値はフラットなプリミティブのみにする
+// 属性値はフラットなプリミティブのみにする
 const flatJsonValueArb = fc.oneof(
   fc.string(),
   fc.double({ noNaN: true, noDefaultInfinity: true }),
@@ -167,7 +175,8 @@ const selfClosingElementNodeArb = fc.record({
   selfClosing: fc.constant(true),
 });
 
-test("ElementNodeSchema: 有効なElementNodeはバリデーション成功", () => {
+// 有効なElementNodeはバリデーション成功することを確認する
+test("schema element node: accepts valid element node", () => {
   fc.assert(
     fc.property(elementNodeArb, (node) => {
       const result = ElementNodeSchema.safeParse(node);
@@ -176,7 +185,8 @@ test("ElementNodeSchema: 有効なElementNodeはバリデーション成功", ()
   );
 });
 
-test("ElementNodeSchema: selfClosing=trueでchildren空配列はバリデーション成功", () => {
+// selfClosing=trueかつchildren空配列のElementNodeが成功することを確認する
+test("schema element node: accepts self-closing node with empty children", () => {
   fc.assert(
     fc.property(selfClosingElementNodeArb, (node) => {
       const result = ElementNodeSchema.safeParse(node);
@@ -185,9 +195,10 @@ test("ElementNodeSchema: selfClosing=trueでchildren空配列はバリデーシ�
   );
 });
 
-// --- DocumentNode ---
+// --- DocumentNode関連 ---
 
-test("DocumentNodeSchema: 有効なDocumentNodeはバリデーション成功", () => {
+// 有効なDocumentNodeはバリデーション成功することを確認する
+test("schema document node: accepts valid document node", () => {
   const documentNodeArb = fc.record({
     type: fc.constant("document" as const),
     children: fc.array(elementNodeArb, { maxLength: 2, size: "small" }),

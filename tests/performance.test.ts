@@ -15,7 +15,8 @@ function measureMs(fn: () => void, repeat = 5): number {
   return samples.reduce((sum, value) => sum + value, 0) / samples.length;
 }
 
-test("tokenize は入力サイズ増加に対して準線形である", () => {
+// tokenizeの処理時間が入力サイズに対して準線形で増えることを確認する
+test("performance: tokenize scales near linearly with input size", () => {
   const smallInput = buildFlatDocument(200);
   const largeInput = buildFlatDocument(2_000);
 
@@ -31,7 +32,8 @@ test("tokenize は入力サイズ増加に対して準線形である", () => {
   assert.isBelow(timeRatio, inputRatio * 2.2);
 });
 
-test("parse は入力サイズ増加に対して準線形である", () => {
+// parseの処理時間が入力サイズに対して準線形で増えることを確認する
+test("performance: parse scales near linearly with input size", () => {
   const smallInput = buildFlatDocument(100);
   const largeInput = buildFlatDocument(1_000);
 
@@ -47,7 +49,8 @@ test("parse は入力サイズ増加に対して準線形である", () => {
   assert.isBelow(timeRatio, inputRatio * 2.5);
 });
 
-test("10,000タグ規模でも実行時間上限内で処理できる", () => {
+// 10,000タグ規模でも上限時間内に処理できることを確認する
+test("performance: parses 10k tags within time budget", () => {
   const hugeInput = buildFlatDocument(10_000);
   const elapsed = measureMs(() => {
     parse(tokenize(hugeInput));

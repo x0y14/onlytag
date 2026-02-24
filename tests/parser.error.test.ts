@@ -10,33 +10,39 @@ function expectParserErrorWithPosition(input: string): void {
   }
 
   if (error === undefined) {
-    assert.fail("parse は不正入力で Error を投げるべき");
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>");
   }
 
   assert.instanceOf(error, Error);
   assert.match((error as Error).message, /position|pos|index|offset/i);
 }
 
-test("閉じタグ不一致は失敗", () => {
+// 閉じタグ名が一致しない入力は失敗することを確認する
+test("parser error: mismatched closing tag fails", () => {
   expectParserErrorWithPosition("<A></B>");
 });
 
-test("余分な閉じタグは失敗", () => {
+// 余分な閉じタグのみの入力は失敗することを確認する
+test("parser error: stray closing tag fails", () => {
   expectParserErrorWithPosition("</A>");
 });
 
-test("閉じタグ不足は失敗", () => {
+// 閉じタグが欠落した入力は失敗することを確認する
+test("parser error: missing closing tag fails", () => {
   expectParserErrorWithPosition("<A><B /></A");
 });
 
-test("ネストした閉じタグ不一致は失敗", () => {
+// ネスト構造で閉じタグが不一致の入力は失敗することを確認する
+test("parser error: nested closing tag mismatch fails", () => {
   expectParserErrorWithPosition("<A><B></A></B>");
 });
 
-test("自己閉じタグへの余分な閉じタグは失敗", () => {
+// 自己閉じタグの後に余分な閉じタグがある入力は失敗することを確認する
+test("parser error: extra close tag after self-closing element fails", () => {
   expectParserErrorWithPosition("<A /></A>");
 });
 
-test("EOFで閉じタグ不足は失敗", () => {
+// EOF到達時に閉じタグ不足なら失敗することを確認する
+test("parser error: eof before closing tag fails", () => {
   expectParserErrorWithPosition("<A>");
 });
