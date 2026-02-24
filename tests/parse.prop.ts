@@ -1,0 +1,75 @@
+import { test, assert } from "vitest";
+import * as fc from "fast-check";
+import { tokenize, parse, DocumentNodeSchema } from "../src/index.js";
+
+function hasPositionHint(message: string): boolean {
+  return /position|pos|index|offset/i.test(message);
+}
+
+const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/);
+const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value));
+
+const selfClosingElementArb = fc
+  .record({
+    tag: identArb,
+    decorations: fc.array(identArb, { maxLength: 2 }),
+    attributes: fc.array(fc.tuple(identArb, jsonLiteralArb), { maxLength: 3 }),
+  })
+  .map(({ tag, decorations, attributes }) => {
+    const parts: string[] = [`<${tag}`];
+    for (const deco of decorations) parts.push(`.${deco}`);
+    for (const [name, value] of attributes) parts.push(`${name}=${value}`);
+    return `${parts.join(" ")} />`;
+  });
+
+const nestedElementArb = fc
+  .record({
+    tag: identArb,
+    children: fc.array(selfClosingElementArb, { minLength: 1, maxLength: 3 }),
+  })
+  .map(({ tag, children }) => `<${tag}>${children.join("")}</${tag}>`);
+
+const documentArb = fc
+  .array(fc.oneof(selfClosingElementArb, nestedElementArb), {
+    minLength: 1,
+    maxLength: 3,
+  })
+  .map((elements) => elements.join(""));
+
+test("parse: 有効文法生成入力は DocumentNodeSchema を満たす", () => {
+  fc.assert(
+    fc.property(documentArb, (input) => {
+      const doc = parse(tokenize(input));
+      const result = DocumentNodeSchema.safeParse(doc);
+      assert.isTrue(result.success);
+    }),
+    { numRuns: 200 },
+  );
+});
+
+test("parse: ネスト要素生成入力では子要素数が1以上になる", () => {
+  fc.assert(
+    fc.property(nestedElementArb, (input) => {
+      const doc = parse(tokenize(input));
+      assert.equal(doc.children.length, 1);
+      assert.isAtLeast(doc.children[0].children.length, 1);
+    }),
+    { numRuns: 200 },
+  );
+});
+
+test("parse: 任意文字列入力は成功か規定エラーになる", () => {
+  fc.assert(
+    fc.property(fc.string({ maxLength: 160 }), (input) => {
+      try {
+        const doc = parse(tokenize(input));
+        const result = DocumentNodeSchema.safeParse(doc);
+        assert.isTrue(result.success);
+      } catch (error) {
+        assert.instanceOf(error, Error);
+        assert.isTrue(hasPositionHint((error as Error).message));
+      }
+    }),
+    { numRuns: 250 },
+  );
+});

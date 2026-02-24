@@ -1,0 +1,39 @@
+{
+  "name": "onlytag",
+  "version": "0.1.0",
+  "description": "onlytag is a simple markup with three kinds of tags, JSON attributes, and decorations.",
+  "keywords": [
+    "json",
+    "lexer",
+    "markup",
+    "parser",
+    "tags",
+    "tokenizer"
+  ],
+  "license": "MIT",
+  "author": "Yuhei Yamauchi",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.d.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:fuzz": "vitest run tests/*.prop.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:perf": "vitest run tests/performance.test.ts",
+    "lint": "oxlint .",
+    "fmt": "oxfmt .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
+    "fast-check": "^4.5.3",
+    "oxfmt": "^0.35.0",
+    "oxlint": "^1.50.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "packageManager": "pnpm@10.30.2"
+}
