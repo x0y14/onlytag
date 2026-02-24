@@ -1,5 +1,5 @@
-export { tokenize } from "./tokenize"
-export { parse } from "./parse"
+export { tokenize } from "./tokenize.js"
+export { parse } from "./parse.js"
 export { TokenKind, TokenSchema, type Token } from "./token.js"
 export {
   JsonValueSchema,

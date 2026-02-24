@@ -3,6 +3,8 @@
 node_modules
 .pnpm-store
 coverage
+dist
+.npm-cache
 
 CLAUDE.md
 .claude
