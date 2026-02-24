@@ -4,10 +4,20 @@ import { z } from "zod";
 
 // --- 内部ヘルパー ---
 
+/**
+ * 文字が空白文字（スペース・タブ・改行・復帰）かどうかを判定する
+ * @param ch - 判定対象の1文字
+ * @returns 空白文字であればtrue
+ */
 function isWhitespace(ch: string): boolean {
   return ch === " " || ch === "\t" || ch === "\n" || ch === "\r";
 }
 
+/**
+ * 文字が識別子に使用可能な文字（英数字・アンダースコア・ハイフン）かどうかを判定する
+ * @param ch - 判定対象の1文字
+ * @returns 識別子文字であればtrue
+ */
 function isIdentChar(ch: string): boolean {
   const c = ch.charCodeAt(0);
   return (
@@ -19,10 +29,22 @@ function isIdentChar(ch: string): boolean {
   );
 }
 
+/**
+ * トークナイズ時のエラーを送出する
+ * @param message - エラーメッセージ
+ * @param position - エラーが発生した入力文字列中の位置
+ * @throws {Error} 常にエラーをスローする
+ */
 function tokenError(message: string, position: number): never {
   throw new Error(`${message}, position=${position}`);
 }
 
+/**
+ * パース時のエラーを送出する
+ * @param message - エラーメッセージ
+ * @param position - エラーが発生した入力文字列中の位置
+ * @throws {Error} 常にエラーをスローする
+ */
 function parseError(message: string, position: number): never {
   throw new Error(`${message}, position=${position}`);
 }
@@ -45,6 +67,12 @@ const JsonValueCodec = z.codec(z.string(), z.json(), {
   encode: (value) => JSON.stringify(value),
 });
 
+/**
+ * 指定位置がJSON値の境界（空白・タグ閉じ・入力末尾）かどうかを判定する
+ * @param input - 入力文字列全体
+ * @param end - 判定対象の位置
+ * @returns 境界であればtrue
+ */
 function isJsonBoundary(input: string, end: number): boolean {
   const len = input.length;
   if (end >= len) return true;
@@ -54,6 +82,11 @@ function isJsonBoundary(input: string, end: number): boolean {
   return false;
 }
 
+/**
+ * 文字がJSON値の開始文字として有効かどうかを判定する
+ * @param ch - 判定対象の1文字
+ * @returns JSON値の開始文字であればtrue
+ */
 function canStartJsonValue(ch: string): boolean {
   return (
     ch === '"' ||
@@ -67,6 +100,12 @@ function canStartJsonValue(ch: string): boolean {
   );
 }
 
+/**
+ * エラーメッセージ用に、不正なリテラルのプレビュー文字列を取得する
+ * @param input - 入力文字列全体
+ * @param pos - プレビュー開始位置
+ * @returns プレビュー文字列。入力末尾の場合は`"<eof>"`
+ */
 function readLiteralPreview(input: string, pos: number): string {
   const len = input.length;
   let i = pos;
@@ -79,6 +118,13 @@ function readLiteralPreview(input: string, pos: number): string {
   return input.slice(pos, i);
 }
 
+/**
+ * 入力文字列からJSON値を読み取る。境界位置まで貪欲にマッチを試みる
+ * @param input - 入力文字列全体
+ * @param pos - 読み取り開始位置
+ * @returns JSON値の生文字列と読み取り後の位置のタプル
+ * @throws {Error} JSON値が見つからない、または不正な場合
+ */
 function readJsonValue(input: string, pos: number): [value: string, newPos: number] {
   const len = input.length;
 
@@ -117,6 +163,12 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
 
 // --- 公開API ---
 
+/**
+ * 入力文字列をトークン列に分割する
+ * @param input - onlytagマークアップの入力文字列
+ * @returns トークンの配列。末尾にEOFトークンを含む
+ * @throws {Error} 不正な文字やトークンが含まれる場合
+ */
 export function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
   const len = input.length;
@@ -211,6 +263,12 @@ export function tokenize(input: string): Token[] {
   return tokens;
 }
 
+/**
+ * トークン列をパースしてAST（ドキュメントノード）を生成する
+ * @param tokens - tokenize関数で生成されたトークン列
+ * @returns ASTのルートであるドキュメントノード
+ * @throws {Error} 構文エラー（タグの不一致・予期しないトークン等）がある場合
+ */
 export function parse(tokens: Token[]): DocumentNode {
   const cursor = { value: 0 };
 
