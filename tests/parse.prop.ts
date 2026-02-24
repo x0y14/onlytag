@@ -8,17 +8,19 @@ function hasPositionHint(message: string): boolean {
 
 const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/);
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value));
+const headerPartArb = fc.oneof(
+  identArb.map((deco) => ({ text: `.${deco}` })),
+  fc.tuple(identArb, jsonLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
+);
 
 const selfClosingElementArb = fc
   .record({
     tag: identArb,
-    decorations: fc.array(identArb, { maxLength: 2 }),
-    attributes: fc.array(fc.tuple(identArb, jsonLiteralArb), { maxLength: 3 }),
+    headerParts: fc.array(headerPartArb, { maxLength: 5 }),
   })
-  .map(({ tag, decorations, attributes }) => {
+  .map(({ tag, headerParts }) => {
     const parts: string[] = [`<${tag}`];
-    for (const deco of decorations) parts.push(`.${deco}`);
-    for (const [name, value] of attributes) parts.push(`${name}=${value}`);
+    for (const part of headerParts) parts.push(part.text);
     return `${parts.join(" ")} />`;
   });
 

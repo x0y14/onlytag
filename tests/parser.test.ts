@@ -40,6 +40,26 @@ test("parser: parses decorations", () => {
   assert.equal(card.decorations[1].name, "rounded_lg");
 });
 
+// 属性の後ろにデコレーションが続いても解析できることを確認する
+test("parser: parses decoration after attribute", () => {
+  const doc = parse(tokenize('<Badge label="new" .primary />'));
+  const badge = doc.children[0];
+  assert.equal(badge.attributes["label"], "new");
+  assert.equal(badge.decorations.length, 1);
+  assert.equal(badge.decorations[0].name, "primary");
+});
+
+// デコレーションと属性が交互に並んでも解析できることを確認する
+test("parser: parses alternating decorations and attributes", () => {
+  const doc = parse(tokenize("<Widget .d1 count=1 .d2 enabled=true />"));
+  const widget = doc.children[0];
+  assert.equal(widget.decorations.length, 2);
+  assert.equal(widget.decorations[0].name, "d1");
+  assert.equal(widget.decorations[1].name, "d2");
+  assert.equal(widget.attributes["count"], 1);
+  assert.equal(widget.attributes["enabled"], true);
+});
+
 // 文字列属性を解析できることを確認する
 test("parser: parses string attribute", () => {
   const doc = parse(tokenize('<Identity name="Lumina" />'));

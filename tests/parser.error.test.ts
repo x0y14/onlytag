@@ -48,6 +48,24 @@ test("parser error: eof before closing tag fails", () => {
   expectParserErrorWithPosition("<A>");
 });
 
+// 属性名の直後に等号がない入力は失敗することを確認する
+test("parser error: missing equals before decoration fails", () => {
+  let error: unknown;
+  try {
+    parse(tokenize("<A flag .hot />"));
+  } catch (caught) {
+    error = caught;
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>");
+  }
+
+  assert.instanceOf(error, Error);
+  assert.match((error as Error).message, /expected=<EQUALS>, actual=<DOT_IDENT>/);
+  assert.match((error as Error).message, /position|pos|index|offset/i);
+});
+
 // 不正なJSON_VALUEトークンを含む場合にparse段で失敗することを確認する
 test("parser error: invalid json token payload fails in parse stage", () => {
   const tokens: Token[] = [

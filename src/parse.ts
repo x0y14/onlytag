@@ -45,30 +45,28 @@ export function parse(tokens: Token[]): DocumentNode {
     const tagToken = expect("IDENT");
     const tagName = tagToken.value;
 
-    // デコレーション
+    // デコレーションと属性
     const decorations: Decoration[] = [];
-    while (peek().kind === "DOT_IDENT") {
-      const deco = advance();
-      decorations.push({ name: deco.value.slice(1) }); // 先頭のドットを除去する
-    }
-
-    // 属性
     const attributes: Record<string, JsonValue> = {};
-    while (peek().kind === "IDENT") {
-      const attrName = advance().value;
-      expect("EQUALS");
-      const jsonToken = expect("JSON_VALUE");
-      const parsed = decodeJsonString(jsonToken.value);
-      if (!parsed.success) {
-        const detail = parsed.error.issues[0]!.message;
-        parseError(
-          `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
-          jsonToken.position,
-        );
+    while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
+      if (peek().kind === "DOT_IDENT") {
+        const deco = advance();
+        decorations.push({ name: deco.value.slice(1) });
+      } else {
+        const attrName = advance().value;
+        expect("EQUALS");
+        const jsonToken = expect("JSON_VALUE");
+        const parsed = decodeJsonString(jsonToken.value);
+        if (!parsed.success) {
+          const detail = parsed.error.issues[0]!.message;
+          parseError(
+            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+            jsonToken.position,
+          );
+        }
+        encodeJsonValue(parsed.data as JsonValue);
+        attributes[attrName] = parsed.data as JsonValue;
       }
-      // codecの双方向契約を維持するため、再エンコード可能であることを確認する
-      encodeJsonValue(parsed.data as JsonValue);
-      attributes[attrName] = parsed.data as JsonValue;
     }
 
     // 自己閉じ
