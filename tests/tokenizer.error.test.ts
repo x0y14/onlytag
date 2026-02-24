@@ -36,3 +36,19 @@ test("属性値が欠落している場合は失敗", () => {
 test("不正文字を含むdecorationは失敗", () => {
   expectTokenizerErrorWithPosition("<A .bad! />");
 });
+
+test("属性値が入力終端で欠落している場合は失敗", () => {
+  expectTokenizerErrorWithPosition("<A level=   ");
+});
+
+test("不正なtrueリテラルは失敗", () => {
+  expectTokenizerErrorWithPosition("<A ok=tru />");
+});
+
+test("不正なfalseリテラルは失敗", () => {
+  expectTokenizerErrorWithPosition("<A ok=fals />");
+});
+
+test("不正なnullリテラルは失敗", () => {
+  expectTokenizerErrorWithPosition("<A ok=nul />");
+});

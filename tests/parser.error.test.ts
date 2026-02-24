@@ -36,3 +36,7 @@ test("ネストした閉じタグ不一致は失敗", () => {
 test("自己閉じタグへの余分な閉じタグは失敗", () => {
   expectParserErrorWithPosition("<A /></A>");
 });
+
+test("EOFで閉じタグ不足は失敗", () => {
+  expectParserErrorWithPosition("<A>");
+});
