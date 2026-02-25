@@ -1,11 +1,13 @@
 import { test, assert } from "vitest"
-import { tokenize, parse } from "../src/index.js"
+import { onlytag } from "../src/onlytag.js"
 import type { Token } from "../src/token.js"
+
+const ot = new onlytag()
 
 function expectParserErrorWithPosition(input: string): void {
   let error: unknown
   try {
-    parse(tokenize(input))
+    ot.parse(ot.tokenize(input))
   } catch (caught) {
     error = caught
   }
@@ -52,7 +54,7 @@ test("parser error: eof before closing tag fails", () => {
 test("parser error: missing equals before decoration fails", () => {
   let error: unknown
   try {
-    parse(tokenize("<A flag .hot />"))
+    ot.parse(ot.tokenize("<A flag .hot />"))
   } catch (caught) {
     error = caught
   }
@@ -80,7 +82,7 @@ test("parser error: invalid json token payload fails in parse stage", () => {
 
   let error: unknown
   try {
-    parse(tokens)
+    ot.parse(tokens)
   } catch (caught) {
     error = caught
   }

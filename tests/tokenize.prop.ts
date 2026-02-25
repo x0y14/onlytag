@@ -1,6 +1,8 @@
 import { test, assert } from "vitest"
 import * as fc from "fast-check"
-import { tokenize } from "../src/tokenize.js"
+import { onlytag } from "../src/onlytag.js"
+
+const ot = new onlytag()
 
 function hasPositionHint(message: string): boolean {
   return /position|pos|index|offset/i.test(message)
@@ -9,7 +11,7 @@ function hasPositionHint(message: string): boolean {
 function expectTokenizerErrorWithPosition(input: string): void {
   let error: unknown
   try {
-    tokenize(input)
+    ot.tokenize(input)
   } catch (caught) {
     error = caught
   }
@@ -47,7 +49,7 @@ test("tokenize property: arbitrary input succeeds or fails with position hint", 
   fc.assert(
     fc.property(fc.string({ maxLength: 120 }), (input) => {
       try {
-        const tokens = tokenize(input)
+        const tokens = ot.tokenize(input)
         assert.isArray(tokens)
         assert.isAtLeast(tokens.length, 1)
         assert.equal(tokens[tokens.length - 1].kind, "EOF")
@@ -64,7 +66,7 @@ test("tokenize property: arbitrary input succeeds or fails with position hint", 
 test("tokenize property: generated self-closing tags always end with eof", () => {
   fc.assert(
     fc.property(selfClosingTagInputArb, (input) => {
-      const tokens = tokenize(input)
+      const tokens = ot.tokenize(input)
       assert.equal(tokens[0].kind, "LT")
       assert.equal(tokens[tokens.length - 1].kind, "EOF")
       assert.equal(tokens.find((token) => token.kind === "IDENT")?.value.length! > 0, true)
@@ -79,8 +81,8 @@ test("tokenize property: whitespace variation preserves token kinds and values",
     fc.property(identArb, identArb, fc.integer({ min: -9, max: 9 }), (tag, attr, value) => {
       const compact = `<${tag} ${attr}=${value} />`
       const spaced = `<  ${tag}   ${attr} = ${value}   />`
-      const compactTokens = tokenize(compact)
-      const spacedTokens = tokenize(spaced)
+      const compactTokens = ot.tokenize(compact)
+      const spacedTokens = ot.tokenize(spaced)
       assert.deepStrictEqual(
         compactTokens.map((token) => token.kind),
         spacedTokens.map((token) => token.kind),

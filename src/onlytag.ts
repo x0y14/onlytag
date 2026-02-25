@@ -1,7 +1,10 @@
 import type { Token, TokenKind } from "./token.js"
-import { decodeJsonString } from "./utils.js"
+import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js"
+import type { Options, NormalizedOptions } from "./types.js"
+import { normalizeOptions } from "./types.js"
+import { decodeJsonString, encodeJsonValue } from "./utils.js"
 
-// --- 内部ヘルパー ---
+// --- tokenize 内部ヘルパー ---
 
 /**
  * 文字が空白文字（スペース・タブ・改行・復帰）かどうかを判定する
@@ -132,15 +135,16 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
   )
 }
 
-// --- 公開API ---
+// --- tokenize 本体 ---
 
 /**
  * 入力文字列をトークン列に分割する
  * @param input - onlytagマークアップの入力文字列
+ * @param options - 正規化済みの機能オプション
  * @returns トークンの配列。末尾にEOFトークンを含む
  * @throws {Error} 不正な文字やトークンが含まれる場合
  */
-export function tokenize(input: string): Token[] {
+function tokenize(input: string, options: NormalizedOptions): Token[] {
   const tokens: Token[] = []
   const len = input.length
   let pos = 0
@@ -197,6 +201,10 @@ export function tokenize(input: string): Token[] {
         break
 
       case "=":
+        // attribute が禁止されている場合は即座にエラー
+        if (!options.allowAttributes) {
+          tokenError(`attributes are not allowed: found attribute at position`, start)
+        }
         emit("EQUALS", "=", start)
         pos += 1
         break
@@ -204,6 +212,10 @@ export function tokenize(input: string): Token[] {
       case ".":
         pos += 1
         if (pos < len && isIdentChar(input[pos])) {
+          // decoration が禁止されている場合は即座にエラー
+          if (!options.allowDecorations) {
+            tokenError(`decorations are not allowed: found decoration at position`, start)
+          }
           const identStart = pos
           while (pos < len && isIdentChar(input[pos])) pos++
           emit("DOT_IDENT", "." + input.slice(identStart, pos), start)
@@ -232,4 +244,183 @@ export function tokenize(input: string): Token[] {
 
   tokens.push({ kind: "EOF", value: "", position: pos })
   return tokens
+}
+
+// --- parse 内部ヘルパー ---
+
+/**
+ * パース時のエラーを送出する
+ * @param message - エラーメッセージ
+ * @param position - エラーが発生した入力文字列中の位置
+ * @throws {Error} 常にエラーをスローする
+ */
+function parseError(message: string, position: number): never {
+  throw new Error(`${message}, position=${position}`)
+}
+
+// --- parse 本体 ---
+
+/**
+ * トークン列をパースしてAST（ドキュメントノード）を生成する
+ * @param tokens - tokenize関数で生成されたトークン列
+ * @param options - 正規化済みの機能オプション
+ * @returns ASTのルートであるドキュメントノード
+ * @throws {Error} 構文エラー（タグの不一致・予期しないトークン等）がある場合
+ */
+function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
+  const cursor = { value: 0 }
+
+  function peek(): Token {
+    return tokens[cursor.value]
+  }
+
+  function advance(): Token {
+    return tokens[cursor.value++]
+  }
+
+  function expect(kind: TokenKind): Token {
+    const tok = peek()
+    if (tok.kind !== kind) {
+      parseError(
+        `unexpected token: expected=<${kind}>, actual=<${tok.kind}>, value="${tok.value}"`,
+        tok.position,
+      )
+    }
+    return advance()
+  }
+
+  function parseElement(): ElementNode {
+    expect("LT")
+    const tagToken = expect("IDENT")
+    const tagName = tagToken.value
+
+    // デコレーションと属性
+    const decorations: Decoration[] = []
+    const attributes: Record<string, JsonValue> = {}
+    while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
+      if (peek().kind === "DOT_IDENT") {
+        if (!options.allowDecorations) {
+          parseError(
+            `decorations are not allowed: found decoration "${peek().value}"`,
+            peek().position,
+          )
+        }
+        const deco = advance()
+        decorations.push({ name: deco.value.slice(1) })
+      } else {
+        const attrName = advance().value
+        if (!options.allowAttributes) {
+          parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
+        }
+        expect("EQUALS")
+        const jsonToken = expect("JSON_VALUE")
+        const parsed = decodeJsonString(jsonToken.value)
+        if (!parsed.success) {
+          const detail = parsed.error.issues[0]!.message
+          parseError(
+            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+            jsonToken.position,
+          )
+        }
+        encodeJsonValue(parsed.data as JsonValue)
+        attributes[attrName] = parsed.data as JsonValue
+      }
+    }
+
+    // 自己閉じ
+    if (peek().kind === "SLASH_GT") {
+      advance()
+      return {
+        type: "element",
+        tagName,
+        decorations,
+        attributes,
+        children: [],
+        selfClosing: true,
+      }
+    }
+
+    expect("GT")
+
+    // 子要素
+    const children: ElementNode[] = []
+    while (peek().kind === "LT") {
+      children.push(parseElement())
+    }
+
+    // 閉じタグ
+    if (peek().kind === "EOF") {
+      parseError(`missing closing tag: expected=</${tagName}>, actual=<eof>`, peek().position)
+    }
+
+    expect("LT_SLASH")
+    const closeTag = expect("IDENT")
+    if (closeTag.value !== tagName) {
+      parseError(
+        `mismatched closing tag: expected=</${tagName}>, actual=</${closeTag.value}>`,
+        closeTag.position,
+      )
+    }
+    expect("GT")
+
+    return {
+      type: "element",
+      tagName,
+      decorations,
+      attributes,
+      children,
+      selfClosing: false,
+    }
+  }
+
+  function parseDocument(): DocumentNode {
+    const children: ElementNode[] = []
+    while (peek().kind !== "EOF") {
+      if (peek().kind === "LT_SLASH") {
+        parseError(
+          `unexpected closing tag at document root: expected=<element>, actual=<${peek().kind}>`,
+          peek().position,
+        )
+      }
+      children.push(parseElement())
+    }
+    return { type: "document", children }
+  }
+
+  return parseDocument()
+}
+
+// --- 公開クラス ---
+
+/**
+ * onlytag パーサーのメインクラス。オプションに従い入力を解析する
+ */
+export class onlytag {
+  /** 正規化済みのオプション */
+  private readonly normalizedOptions: NormalizedOptions
+
+  /**
+   * @param options - 機能オプション。省略時は全機能を許可
+   */
+  constructor(options?: Options) {
+    this.normalizedOptions = normalizeOptions(options)
+  }
+
+  /**
+   * 入力文字列をトークン列に分割する
+   * @param input - onlytag マークアップの入力文字列
+   * @returns トークンの配列
+   */
+  tokenize(input: string): Token[] {
+    return tokenize(input, this.normalizedOptions)
+  }
+
+  /**
+   * トークン列を AST に変換する
+   * @param tokens - tokenize で生成されたトークン列
+   * @returns ドキュメントノード
+   */
+  parse(tokens: Token[]): DocumentNode {
+    return parse(tokens, this.normalizedOptions)
+  }
 }

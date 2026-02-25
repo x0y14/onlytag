@@ -7,6 +7,7 @@ import {
   DocumentNodeSchema,
 } from "../src/ast.js"
 import { TokenSchema } from "../src/token.js"
+import { NormalizedOptionsSchema } from "../src/types.js"
 
 // --- JsonValue関連 ---
 
@@ -210,4 +211,28 @@ test("schema document node: accepts valid document node", () => {
       assert.isTrue(result.success)
     }),
   )
+})
+
+// --- NormalizedOptions関連 ---
+
+// NormalizedOptionsSchema が有効な値を受理することを確認する
+test("schema normalized feature options: accepts valid options", () => {
+  fc.assert(
+    fc.property(fc.boolean(), fc.boolean(), (allowDecorations, allowAttributes) => {
+      const result = NormalizedOptionsSchema.safeParse({
+        allowDecorations,
+        allowAttributes,
+      })
+      assert.isTrue(result.success)
+    }),
+  )
+})
+
+// NormalizedOptionsSchema が不正な値を拒否することを確認する
+test("schema normalized feature options: rejects non-boolean values", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: "yes",
+    allowAttributes: 1,
+  })
+  assert.isFalse(result.success)
 })

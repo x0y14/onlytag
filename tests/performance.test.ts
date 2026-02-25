@@ -1,5 +1,7 @@
 import { test, assert } from "vitest"
-import { tokenize, parse } from "../src/index.js"
+import { onlytag } from "../src/onlytag.js"
+
+const ot = new onlytag()
 
 function buildFlatDocument(size: number): string {
   return Array.from({ length: size }, (_, i) => `<Node_${i} value=${i} />`).join("")
@@ -21,10 +23,10 @@ test("performance: tokenize scales near linearly with input size", () => {
   const largeInput = buildFlatDocument(2_000)
 
   const smallMs = measureMs(() => {
-    tokenize(smallInput)
+    ot.tokenize(smallInput)
   })
   const largeMs = measureMs(() => {
-    tokenize(largeInput)
+    ot.tokenize(largeInput)
   })
 
   const inputRatio = largeInput.length / smallInput.length
@@ -38,10 +40,10 @@ test("performance: parse scales near linearly with input size", () => {
   const largeInput = buildFlatDocument(1_000)
 
   const smallMs = measureMs(() => {
-    parse(tokenize(smallInput))
+    ot.parse(ot.tokenize(smallInput))
   })
   const largeMs = measureMs(() => {
-    parse(tokenize(largeInput))
+    ot.parse(ot.tokenize(largeInput))
   })
 
   const inputRatio = largeInput.length / smallInput.length
@@ -53,7 +55,7 @@ test("performance: parse scales near linearly with input size", () => {
 test("performance: parses 10k tags within time budget", () => {
   const hugeInput = buildFlatDocument(10_000)
   const elapsed = measureMs(() => {
-    parse(tokenize(hugeInput))
+    ot.parse(ot.tokenize(hugeInput))
   }, 1)
   assert.isBelow(elapsed, 3_000)
 })

@@ -1,5 +1,10 @@
-export { tokenize } from "./tokenize.js"
-export { parse } from "./parse.js"
+export { onlytag } from "./onlytag.js"
+export {
+  type Options,
+  type NormalizedOptions,
+  NormalizedOptionsSchema,
+  normalizeOptions,
+} from "./types.js"
 export { TokenKind, TokenSchema, type Token } from "./token.js"
 export {
   JsonValueSchema,

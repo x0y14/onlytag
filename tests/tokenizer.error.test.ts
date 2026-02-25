@@ -1,10 +1,12 @@
 import { test, assert } from "vitest"
-import { tokenize } from "../src/tokenize.js"
+import { onlytag } from "../src/onlytag.js"
+
+const ot = new onlytag()
 
 function expectTokenizerErrorWithPosition(input: string): void {
   let error: unknown
   try {
-    tokenize(input)
+    ot.tokenize(input)
   } catch (caught) {
     error = caught
   }
