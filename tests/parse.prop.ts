@@ -12,6 +12,10 @@ const headerPartArb = fc.oneof(
   identArb.map((deco) => ({ text: `.${deco}` })),
   fc.tuple(identArb, jsonLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
 )
+const mixedHeaderPartArb = fc.oneof(
+  identArb.map((name) => ({ kind: "deco" as const, name })),
+  fc.tuple(identArb, fc.jsonValue()).map(([name, value]) => ({ kind: "attr" as const, name, value })),
+)
 
 const selfClosingElementArb = fc
   .record({
@@ -75,6 +79,39 @@ test("parse property: arbitrary input succeeds or fails with position hint", () 
         assert.isTrue(hasPositionHint((error as Error).message))
       }
     }),
+    { numRuns: 250 },
+  )
+})
+
+// attr/decoが任意個・任意順で出現しても正しくパースできることを確認する
+test("parse property: random attr and deco order is parsed correctly", () => {
+  fc.assert(
+    fc.property(
+      fc.record({
+        tag: identArb,
+        parts: fc.array(mixedHeaderPartArb, { maxLength: 10 }),
+      }),
+      ({ tag, parts }) => {
+        const input = `<${tag} ${parts
+          .map((part) =>
+            part.kind === "deco" ? `.${part.name}` : `${part.name}=${JSON.stringify(part.value)}`,
+          )
+          .join(" ")} />`
+        const doc = parse(tokenize(input))
+        assert.equal(doc.children.length, 1)
+        assert.deepStrictEqual(
+          doc.children[0].decorations.map((deco) => deco.name),
+          parts.filter((part) => part.kind === "deco").map((part) => part.name),
+        )
+        const expectedAttributes: Record<string, unknown> = {}
+        for (const part of parts) {
+          if (part.kind === "attr") {
+            expectedAttributes[part.name] = JSON.parse(JSON.stringify(part.value))
+          }
+        }
+        assert.deepStrictEqual(doc.children[0].attributes, expectedAttributes)
+      },
+    ),
     { numRuns: 250 },
   )
 })
