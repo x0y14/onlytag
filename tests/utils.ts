@@ -1,5 +1,4 @@
 import { type NormalizedFeatureOptions } from "../src/types.js"
-import { onlytag } from "../src/onlytag.js"
 
 /**
  * 全ての正規化済みオプション組み合わせを返す
@@ -11,13 +10,6 @@ export function getAllNormalizedFeatureOptions(): NormalizedFeatureOptions[] {
     { allowDecorations: false, allowAttributes: true },
     { allowDecorations: false, allowAttributes: false },
   ]
-}
-
-/**
- * 指定オプションで onlytag インスタンスを生成する
- */
-export function createOnlytag(options?: NormalizedFeatureOptions): onlytag {
-  return new onlytag(options)
 }
 
 /** 入力カテゴリの判定用 */
