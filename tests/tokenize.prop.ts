@@ -6,8 +6,28 @@ function hasPositionHint(message: string): boolean {
   return /position|pos|index|offset/i.test(message)
 }
 
+function expectTokenizerErrorWithPosition(input: string): void {
+  let error: unknown
+  try {
+    tokenize(input)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.isTrue(hasPositionHint((error as Error).message))
+}
+
 const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/)
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
+const invalidJsonLiteralArb = fc.oneof(
+  fc.constantFrom("", "-", "tru", "fals", "nul", '"unterminated', "{", "[", "1e", "01"),
+  fc.jsonValue().map((value) => `${JSON.stringify(value)}x`),
+)
 
 const selfClosingTagInputArb = fc
   .record({
@@ -69,6 +89,36 @@ test("tokenize property: whitespace variation preserves token kinds and values",
         compactTokens.map((token) => token.value),
         spacedTokens.map((token) => token.value),
       )
+    }),
+    { numRuns: 200 },
+  )
+})
+
+// 境界値を含む不正JSON属性値は失敗することを確認する
+test("tokenize property: invalid json attribute values are always rejected", () => {
+  fc.assert(
+    fc.property(invalidJsonLiteralArb, fc.constantFrom("/>", " />", "   />"), (value, close) => {
+      expectTokenizerErrorWithPosition(`<A attr=${value}${close}`)
+    }),
+    { numRuns: 250 },
+  )
+})
+
+// 不正なデコレーションを含むタグは失敗することを確認する
+test("tokenize property: invalid decorations are rejected", () => {
+  fc.assert(
+    fc.property(identArb, fc.constantFrom("", "!", "@", ":", ",", " "), (tag, suffix) => {
+      expectTokenizerErrorWithPosition(`<${tag} .${suffix} />`)
+    }),
+    { numRuns: 200 },
+  )
+})
+
+// 不正な属性名を含むタグは失敗することを確認する
+test("tokenize property: invalid attributes are rejected", () => {
+  fc.assert(
+    fc.property(identArb, fc.constantFrom("!", "@", ":", ","), (tag, badChar) => {
+      expectTokenizerErrorWithPosition(`<${tag} attr${badChar}=1 />`)
     }),
     { numRuns: 200 },
   )

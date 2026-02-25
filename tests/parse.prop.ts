@@ -7,10 +7,29 @@ function hasPositionHint(message: string): boolean {
 }
 
 const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/)
+const safeIdentArb = identArb.filter((value) => value !== "__proto__")
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
+function hasProtoKey(value: unknown): boolean {
+  if (Array.isArray(value)) return value.some((item) => hasProtoKey(item))
+  if (value !== null && typeof value === "object") {
+    const record = value as Record<string, unknown>
+    if (Object.prototype.hasOwnProperty.call(record, "__proto__")) return true
+    return Object.values(record).some((item) => hasProtoKey(item))
+  }
+  return false
+}
+const safeJsonValueArb = fc.jsonValue().filter((value) => !hasProtoKey(value))
 const headerPartArb = fc.oneof(
   identArb.map((deco) => ({ text: `.${deco}` })),
   fc.tuple(identArb, jsonLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
+)
+const mixedHeaderPartArb = fc.oneof(
+  safeIdentArb.map((name) => ({ kind: "deco" as const, name })),
+  fc.tuple(safeIdentArb, safeJsonValueArb).map(([name, value]) => ({
+    kind: "attr" as const,
+    name,
+    value,
+  })),
 )
 
 const selfClosingElementArb = fc
@@ -75,6 +94,39 @@ test("parse property: arbitrary input succeeds or fails with position hint", () 
         assert.isTrue(hasPositionHint((error as Error).message))
       }
     }),
+    { numRuns: 250 },
+  )
+})
+
+// attr/decoが任意個・任意順で出現しても正しくパースできることを確認する
+test("parse property: random attr and deco order is parsed correctly", () => {
+  fc.assert(
+    fc.property(
+      fc.record({
+        tag: identArb,
+        parts: fc.array(mixedHeaderPartArb, { maxLength: 10 }),
+      }),
+      ({ tag, parts }) => {
+        const input = `<${tag} ${parts
+          .map((part) =>
+            part.kind === "deco" ? `.${part.name}` : `${part.name}=${JSON.stringify(part.value)}`,
+          )
+          .join(" ")} />`
+        const doc = parse(tokenize(input))
+        assert.equal(doc.children.length, 1)
+        assert.deepStrictEqual(
+          doc.children[0].decorations.map((deco) => deco.name),
+          parts.filter((part) => part.kind === "deco").map((part) => part.name),
+        )
+        const expectedAttributes: Record<string, unknown> = {}
+        for (const part of parts) {
+          if (part.kind === "attr") {
+            expectedAttributes[part.name] = JSON.parse(JSON.stringify(part.value))
+          }
+        }
+        assert.deepStrictEqual(doc.children[0].attributes, expectedAttributes)
+      },
+    ),
     { numRuns: 250 },
   )
 })
