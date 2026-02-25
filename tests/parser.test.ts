@@ -1,9 +1,11 @@
 import { test, assert } from "vitest"
-import { tokenize, parse } from "../src/index.js"
+import { onlytag } from "../src/onlytag.js"
+
+const ot = new onlytag()
 
 // 単一の自己閉じタグを解析できることを確認する
 test("parser: parses single self-closing tag", () => {
-  const doc = parse(tokenize("<Br />"))
+  const doc = ot.parse(ot.tokenize("<Br />"))
   assert.equal(doc.type, "document")
   assert.equal(doc.children.length, 1)
   assert.equal(doc.children[0].tagName, "Br")
@@ -13,7 +15,7 @@ test("parser: parses single self-closing tag", () => {
 
 // 空の開閉タグペアを解析できることを確認する
 test("parser: parses empty open-close pair", () => {
-  const doc = parse(tokenize("<Div></Div>"))
+  const doc = ot.parse(ot.tokenize("<Div></Div>"))
   assert.equal(doc.children.length, 1)
   assert.equal(doc.children[0].tagName, "Div")
   assert.equal(doc.children[0].selfClosing, false)
@@ -22,7 +24,7 @@ test("parser: parses empty open-close pair", () => {
 
 // 親子のネスト要素を解析できることを確認する
 test("parser: parses nested elements", () => {
-  const doc = parse(tokenize("<Parent><Child /></Parent>"))
+  const doc = ot.parse(ot.tokenize("<Parent><Child /></Parent>"))
   assert.equal(doc.children.length, 1)
   const parent = doc.children[0]
   assert.equal(parent.tagName, "Parent")
@@ -33,7 +35,7 @@ test("parser: parses nested elements", () => {
 
 // デコレーションを複数解析できることを確認する
 test("parser: parses decorations", () => {
-  const doc = parse(tokenize("<Card .elevated .rounded_lg />"))
+  const doc = ot.parse(ot.tokenize("<Card .elevated .rounded_lg />"))
   const card = doc.children[0]
   assert.equal(card.decorations.length, 2)
   assert.equal(card.decorations[0].name, "elevated")
@@ -42,7 +44,7 @@ test("parser: parses decorations", () => {
 
 // 属性の後ろにデコレーションが続いても解析できることを確認する
 test("parser: parses decoration after attribute", () => {
-  const doc = parse(tokenize('<Badge label="new" .primary />'))
+  const doc = ot.parse(ot.tokenize('<Badge label="new" .primary />'))
   const badge = doc.children[0]
   assert.equal(badge.attributes["label"], "new")
   assert.equal(badge.decorations.length, 1)
@@ -51,7 +53,7 @@ test("parser: parses decoration after attribute", () => {
 
 // デコレーションと属性が交互に並んでも解析できることを確認する
 test("parser: parses alternating decorations and attributes", () => {
-  const doc = parse(tokenize("<Widget .d1 count=1 .d2 enabled=true />"))
+  const doc = ot.parse(ot.tokenize("<Widget .d1 count=1 .d2 enabled=true />"))
   const widget = doc.children[0]
   assert.equal(widget.decorations.length, 2)
   assert.equal(widget.decorations[0].name, "d1")
@@ -62,31 +64,31 @@ test("parser: parses alternating decorations and attributes", () => {
 
 // 文字列属性を解析できることを確認する
 test("parser: parses string attribute", () => {
-  const doc = parse(tokenize('<Identity name="Lumina" />'))
+  const doc = ot.parse(ot.tokenize('<Identity name="Lumina" />'))
   assert.equal(doc.children[0].attributes["name"], "Lumina")
 })
 
 // 数値属性を解析できることを確認する
 test("parser: parses numeric attribute", () => {
-  const doc = parse(tokenize("<Identity level=42 />"))
+  const doc = ot.parse(ot.tokenize("<Identity level=42 />"))
   assert.equal(doc.children[0].attributes["level"], 42)
 })
 
 // 真偽値属性を解析できることを確認する
 test("parser: parses boolean attribute", () => {
-  const doc = parse(tokenize("<Payload success=true />"))
+  const doc = ot.parse(ot.tokenize("<Payload success=true />"))
   assert.equal(doc.children[0].attributes["success"], true)
 })
 
 // null属性を解析できることを確認する
 test("parser: parses null attribute", () => {
-  const doc = parse(tokenize("<Skills passive=null />"))
+  const doc = ot.parse(ot.tokenize("<Skills passive=null />"))
   assert.equal(doc.children[0].attributes["passive"], null)
 })
 
 // オブジェクト属性を解析できることを確認する
 test("parser: parses object attribute", () => {
-  const doc = parse(tokenize('<Stats base={"hp": 1500, "mp": 800} />'))
+  const doc = ot.parse(ot.tokenize('<Stats base={"hp": 1500, "mp": 800} />'))
   assert.deepStrictEqual(doc.children[0].attributes["base"], {
     hp: 1500,
     mp: 800,
@@ -95,13 +97,13 @@ test("parser: parses object attribute", () => {
 
 // 配列属性を解析できることを確認する
 test("parser: parses array attribute", () => {
-  const doc = parse(tokenize("<Stats modifiers=[1.2, 0.9, 1.05] />"))
+  const doc = ot.parse(ot.tokenize("<Stats modifiers=[1.2, 0.9, 1.05] />"))
   assert.deepStrictEqual(doc.children[0].attributes["modifiers"], [1.2, 0.9, 1.05])
 })
 
 // 複数のルート要素を解析できることを確認する
 test("parser: parses multiple root elements", () => {
-  const doc = parse(tokenize("<A /><B /><C />"))
+  const doc = ot.parse(ot.tokenize("<A /><B /><C />"))
   assert.equal(doc.children.length, 3)
   assert.equal(doc.children[0].tagName, "A")
   assert.equal(doc.children[1].tagName, "B")
@@ -126,7 +128,7 @@ test("parser: parses complete README Character example", () => {
       </Inventory>
     </Character>
   `
-  const doc = parse(tokenize(input))
+  const doc = ot.parse(ot.tokenize(input))
   assert.equal(doc.children.length, 1)
 
   const character = doc.children[0]
@@ -168,14 +170,14 @@ test("parser: parses complete README Character example", () => {
 
 // 空入力から空のdocumentを返すことを確認する
 test("parser: returns empty document for empty input", () => {
-  const doc = parse(tokenize(""))
+  const doc = ot.parse(ot.tokenize(""))
   assert.equal(doc.type, "document")
   assert.equal(doc.children.length, 0)
 })
 
 // タグ名・属性名・デコレーション名の許可文字を受理することを確認する
 test("parser: accepts allowed identifier characters", () => {
-  const doc = parse(tokenize('<A_1-b .d_2-e k_3-f={"x":1} />'))
+  const doc = ot.parse(ot.tokenize('<A_1-b .d_2-e k_3-f={"x":1} />'))
   assert.equal(doc.children.length, 1)
   const node = doc.children[0]
   assert.equal(node.tagName, "A_1-b")
@@ -185,7 +187,7 @@ test("parser: accepts allowed identifier characters", () => {
 
 // 指数表記の数値を解析できることを確認する
 test("parser: parses scientific notation number", () => {
-  const doc = parse(tokenize("<Metric value=1e3 />"))
+  const doc = ot.parse(ot.tokenize("<Metric value=1e3 />"))
   assert.equal(doc.children[0].attributes["value"], 1000)
 })
 
@@ -198,7 +200,7 @@ test("parser: parses multiple roots with mixed whitespace", () => {
     </B>
     <D />
   `
-  const doc = parse(tokenize(input))
+  const doc = ot.parse(ot.tokenize(input))
   assert.equal(doc.children.length, 3)
   assert.equal(doc.children[1].tagName, "B")
   assert.equal(doc.children[1].children[0].tagName, "C")
@@ -221,7 +223,7 @@ test("parser: parses README Event example as multiple roots", () => {
     </Event>
   `
 
-  const doc = parse(tokenize(input))
+  const doc = ot.parse(ot.tokenize(input))
   assert.equal(doc.children.length, 3)
   assert.equal(doc.children[0].tagName, "Event")
   assert.equal(doc.children[1].decorations[1].name, "low_priority")
@@ -230,7 +232,7 @@ test("parser: parses README Event example as multiple roots", () => {
 
 // JSON属性の直後が/>でも構文解析できることを確認する
 test("parser: parses json attribute immediately followed by slash-gt", () => {
-  const doc = parse(tokenize('<A config={"k":1}/>'))
+  const doc = ot.parse(ot.tokenize('<A config={"k":1}/>'))
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })

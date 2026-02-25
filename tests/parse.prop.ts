@@ -1,6 +1,8 @@
 import { test, assert } from "vitest"
 import * as fc from "fast-check"
-import { tokenize, parse, DocumentNodeSchema } from "../src/index.js"
+import { onlytag, DocumentNodeSchema } from "../src/index.js"
+
+const ot = new onlytag()
 
 function hasPositionHint(message: string): boolean {
   return /position|pos|index|offset/i.test(message)
@@ -61,7 +63,7 @@ const documentArb = fc
 test("parse property: generated valid grammar satisfies document schema", () => {
   fc.assert(
     fc.property(documentArb, (input) => {
-      const doc = parse(tokenize(input))
+      const doc = ot.parse(ot.tokenize(input))
       const result = DocumentNodeSchema.safeParse(doc)
       assert.isTrue(result.success)
     }),
@@ -73,7 +75,7 @@ test("parse property: generated valid grammar satisfies document schema", () => 
 test("parse property: generated nested element has at least one child", () => {
   fc.assert(
     fc.property(nestedElementArb, (input) => {
-      const doc = parse(tokenize(input))
+      const doc = ot.parse(ot.tokenize(input))
       assert.equal(doc.children.length, 1)
       assert.isAtLeast(doc.children[0].children.length, 1)
     }),
@@ -86,7 +88,7 @@ test("parse property: arbitrary input succeeds or fails with position hint", () 
   fc.assert(
     fc.property(fc.string({ maxLength: 160 }), (input) => {
       try {
-        const doc = parse(tokenize(input))
+        const doc = ot.parse(ot.tokenize(input))
         const result = DocumentNodeSchema.safeParse(doc)
         assert.isTrue(result.success)
       } catch (error) {
@@ -112,7 +114,7 @@ test("parse property: random attr and deco order is parsed correctly", () => {
             part.kind === "deco" ? `.${part.name}` : `${part.name}=${JSON.stringify(part.value)}`,
           )
           .join(" ")} />`
-        const doc = parse(tokenize(input))
+        const doc = ot.parse(ot.tokenize(input))
         assert.equal(doc.children.length, 1)
         assert.deepStrictEqual(
           doc.children[0].decorations.map((deco) => deco.name),

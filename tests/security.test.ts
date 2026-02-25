@@ -1,5 +1,7 @@
 import { test, assert } from "vitest"
-import { tokenize, parse } from "../src/index.js"
+import { onlytag } from "../src/onlytag.js"
+
+const ot = new onlytag()
 
 function assertControlledError(error: unknown): void {
   assert.instanceOf(error, Error)
@@ -11,7 +13,7 @@ test("security: long malformed input fails with controlled error", () => {
   const input = `<A ${"x".repeat(20_000)}!=1 />`
   let error: unknown
   try {
-    parse(tokenize(input))
+    ot.parse(ot.tokenize(input))
   } catch (caught) {
     error = caught
   }
@@ -30,7 +32,7 @@ test("security: deep nesting does not hang", () => {
 
   const startedAt = Date.now()
   try {
-    const doc = parse(tokenize(input))
+    const doc = ot.parse(ot.tokenize(input))
     assert.equal(doc.children.length, 1)
   } catch (error) {
     assertControlledError(error)
@@ -43,7 +45,7 @@ test("security: deep nesting does not hang", () => {
 test("security: __proto__ payload does not cause prototype pollution", () => {
   assert.isUndefined(({} as { polluted?: string }).polluted)
 
-  const doc = parse(tokenize('<A payload={"__proto__":{"polluted":"yes"},"safe":1} />'))
+  const doc = ot.parse(ot.tokenize('<A payload={"__proto__":{"polluted":"yes"},"safe":1} />'))
   const payload = doc.children[0].attributes["payload"]
   assert.deepStrictEqual(payload, { safe: 1 })
   assert.isUndefined(({} as { polluted?: string }).polluted)
@@ -51,6 +53,6 @@ test("security: __proto__ payload does not cause prototype pollution", () => {
 
 // HTML風のペイロードは単なる文字列として扱われることを確認する
 test("security: html-like payload is treated as plain string", () => {
-  const doc = parse(tokenize('<A content="</script><img src=x onerror=alert(1)>" />'))
+  const doc = ot.parse(ot.tokenize('<A content="</script><img src=x onerror=alert(1)>" />'))
   assert.equal(doc.children[0].attributes["content"], "</script><img src=x onerror=alert(1)>")
 })

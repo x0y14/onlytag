@@ -1,29 +1,31 @@
 import { test, assert } from "vitest"
-import * as onlytag from "../src/index.js"
+import * as onlytagModule from "../src/index.js"
+import { onlytag } from "../src/onlytag.js"
 
 // 公開APIの必須エクスポートが存在することを確認する
 test("api contract: exports required symbols", () => {
-  assert.isFunction(onlytag.tokenize)
-  assert.isFunction(onlytag.parse)
-  assert.isDefined(onlytag.TokenSchema)
-  assert.isDefined(onlytag.TokenKind)
-  assert.isDefined(onlytag.JsonValueSchema)
-  assert.isDefined(onlytag.DecorationSchema)
-  assert.isDefined(onlytag.ElementNodeSchema)
-  assert.isDefined(onlytag.DocumentNodeSchema)
+  assert.isFunction(onlytagModule.onlytag)
+  assert.isDefined(onlytagModule.TokenSchema)
+  assert.isDefined(onlytagModule.TokenKind)
+  assert.isDefined(onlytagModule.JsonValueSchema)
+  assert.isDefined(onlytagModule.DecorationSchema)
+  assert.isDefined(onlytagModule.ElementNodeSchema)
+  assert.isDefined(onlytagModule.DocumentNodeSchema)
 })
 
 // 空文字列を tokenize した場合に EOF のみが返ることを確認する
 test("api contract: tokenize returns eof for empty input", () => {
-  const tokens = onlytag.tokenize("")
+  const ot = new onlytag()
+  const tokens = ot.tokenize("")
   assert.equal(tokens.length, 1)
   assert.equal(tokens[0].kind, "EOF")
 })
 
 // parse の戻り値が document ノードであることを確認する
 test("api contract: parse returns document node", () => {
-  const tokens = onlytag.tokenize("<A />")
-  const doc = onlytag.parse(tokens)
+  const ot = new onlytag()
+  const tokens = ot.tokenize("<A />")
+  const doc = ot.parse(tokens)
   assert.equal(doc.type, "document")
   assert.equal(doc.children.length, 1)
   assert.equal(doc.children[0].tagName, "A")
@@ -31,14 +33,14 @@ test("api contract: parse returns document node", () => {
 
 // 公開されているスキーマが最小構成の値を受理することを確認する
 test("api contract: schemas accept minimal valid values", () => {
-  const tokenResult = onlytag.TokenSchema.safeParse({
+  const tokenResult = onlytagModule.TokenSchema.safeParse({
     kind: "EOF",
     value: "",
     position: 0,
   })
   assert.isTrue(tokenResult.success)
 
-  const elementResult = onlytag.ElementNodeSchema.safeParse({
+  const elementResult = onlytagModule.ElementNodeSchema.safeParse({
     type: "element",
     tagName: "A",
     decorations: [],
@@ -47,4 +49,30 @@ test("api contract: schemas accept minimal valid values", () => {
     selfClosing: true,
   })
   assert.isTrue(elementResult.success)
+})
+
+// onlytag class が export されていることを確認する
+test("api contract: exports onlytag class", () => {
+  assert.isFunction(onlytagModule.onlytag)
+  const ot = new onlytagModule.onlytag()
+  assert.isFunction(ot.tokenize)
+  assert.isFunction(ot.parse)
+})
+
+// FeatureOptions 関連の export を確認する
+test("api contract: exports feature options utilities", () => {
+  assert.isFunction(onlytagModule.normalizeFeatureOptions)
+  assert.isDefined(onlytagModule.NormalizedFeatureOptionsSchema)
+})
+
+// 部分指定でインスタンス生成可能なことを確認する
+test("api contract: onlytag accepts partial feature options", () => {
+  const ot1 = new onlytag({ allowDecorations: false })
+  assert.isFunction(ot1.tokenize)
+
+  const ot2 = new onlytag({})
+  assert.isFunction(ot2.tokenize)
+
+  const ot3 = new onlytag()
+  assert.isFunction(ot3.tokenize)
 })
