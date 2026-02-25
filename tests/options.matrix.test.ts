@@ -1,7 +1,7 @@
 import { test, assert } from "vitest"
 import { onlytag } from "../src/onlytag.js"
-import { getAllNormalizedFeatureOptions, shouldPass, type InputCategory } from "./utils.js"
-import type { NormalizedFeatureOptions } from "../src/types.js"
+import { getAllNormalizedOptions, shouldPass, type InputCategory } from "./utils.js"
+import type { NormalizedOptions } from "../src/types.js"
 import type { Token } from "../src/token.js"
 
 /** カテゴリごとの代表入力 */
@@ -29,11 +29,11 @@ const representatives: Record<InputCategory, { label: string; input: string }[]>
 /**
  * モードのラベルを生成する
  */
-function modeLabel(options: NormalizedFeatureOptions): string {
+function modeLabel(options: NormalizedOptions): string {
   return `deco=${options.allowDecorations},attr=${options.allowAttributes}`
 }
 
-for (const options of getAllNormalizedFeatureOptions()) {
+for (const options of getAllNormalizedOptions()) {
   for (const category of ["A", "B", "C", "D"] as InputCategory[]) {
     for (const { label, input } of representatives[category]) {
       const expectPass = shouldPass(category, options)

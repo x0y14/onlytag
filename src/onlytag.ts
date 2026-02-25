@@ -1,7 +1,7 @@
 import type { Token, TokenKind } from "./token.js"
 import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js"
-import type { FeatureOptions, NormalizedFeatureOptions } from "./types.js"
-import { normalizeFeatureOptions } from "./types.js"
+import type { Options, NormalizedOptions } from "./types.js"
+import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 
 // --- tokenize 内部ヘルパー ---
@@ -144,7 +144,7 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
  * @returns トークンの配列。末尾にEOFトークンを含む
  * @throws {Error} 不正な文字やトークンが含まれる場合
  */
-function tokenize(input: string, options: NormalizedFeatureOptions): Token[] {
+function tokenize(input: string, options: NormalizedOptions): Token[] {
   const tokens: Token[] = []
   const len = input.length
   let pos = 0
@@ -267,7 +267,7 @@ function parseError(message: string, position: number): never {
  * @returns ASTのルートであるドキュメントノード
  * @throws {Error} 構文エラー（タグの不一致・予期しないトークン等）がある場合
  */
-function parse(tokens: Token[], options: NormalizedFeatureOptions): DocumentNode {
+function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   const cursor = { value: 0 }
 
   function peek(): Token {
@@ -397,13 +397,13 @@ function parse(tokens: Token[], options: NormalizedFeatureOptions): DocumentNode
  */
 export class onlytag {
   /** 正規化済みのオプション */
-  private readonly normalizedFeatureOptions: NormalizedFeatureOptions
+  private readonly normalizedOptions: NormalizedOptions
 
   /**
    * @param options - 機能オプション。省略時は全機能を許可
    */
-  constructor(options?: FeatureOptions) {
-    this.normalizedFeatureOptions = normalizeFeatureOptions(options)
+  constructor(options?: Options) {
+    this.normalizedOptions = normalizeOptions(options)
   }
 
   /**
@@ -412,7 +412,7 @@ export class onlytag {
    * @returns トークンの配列
    */
   tokenize(input: string): Token[] {
-    return tokenize(input, this.normalizedFeatureOptions)
+    return tokenize(input, this.normalizedOptions)
   }
 
   /**
@@ -421,6 +421,6 @@ export class onlytag {
    * @returns ドキュメントノード
    */
   parse(tokens: Token[]): DocumentNode {
-    return parse(tokens, this.normalizedFeatureOptions)
+    return parse(tokens, this.normalizedOptions)
   }
 }

@@ -5,7 +5,7 @@ import { z } from "zod"
  * @param allowDecorations - decoration（.name）の使用を許可するか。省略時は true
  * @param allowAttributes - attribute（key=value）の使用を許可するか。省略時は true
  */
-export interface FeatureOptions {
+export interface Options {
   allowDecorations?: boolean
   allowAttributes?: boolean
 }
@@ -13,23 +13,23 @@ export interface FeatureOptions {
 /**
  * 正規化済み機能オプション。全フィールドが必須の boolean
  */
-export interface NormalizedFeatureOptions {
+export interface NormalizedOptions {
   allowDecorations: boolean
   allowAttributes: boolean
 }
 
-/** NormalizedFeatureOptions の Zod スキーマ */
-export const NormalizedFeatureOptionsSchema = z.object({
+/** NormalizedOptions の Zod スキーマ */
+export const NormalizedOptionsSchema = z.object({
   allowDecorations: z.boolean(),
   allowAttributes: z.boolean(),
 })
 
 /**
- * FeatureOptions を正規化する。未指定フィールドはデフォルト値（true）で補完する
+ * Options を正規化する。未指定フィールドはデフォルト値（true）で補完する
  * @param options - 正規化前のオプション。undefined の場合は全て許可
- * @returns 全フィールドが確定した NormalizedFeatureOptions
+ * @returns 全フィールドが確定した NormalizedOptions
  */
-export function normalizeFeatureOptions(options?: FeatureOptions): NormalizedFeatureOptions {
+export function normalizeOptions(options?: Options): NormalizedOptions {
   return {
     allowDecorations: options?.allowDecorations ?? true,
     allowAttributes: options?.allowAttributes ?? true,

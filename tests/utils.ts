@@ -1,9 +1,9 @@
-import { type NormalizedFeatureOptions } from "../src/types.js"
+import { type NormalizedOptions } from "../src/types.js"
 
 /**
  * 全ての正規化済みオプション組み合わせを返す
  */
-export function getAllNormalizedFeatureOptions(): NormalizedFeatureOptions[] {
+export function getAllNormalizedOptions(): NormalizedOptions[] {
   return [
     { allowDecorations: true, allowAttributes: true },
     { allowDecorations: true, allowAttributes: false },
@@ -18,7 +18,7 @@ export type InputCategory = "A" | "B" | "C" | "D"
 /**
  * 指定カテゴリの入力が指定モードで成功すべきか判定する
  */
-export function shouldPass(category: InputCategory, options: NormalizedFeatureOptions): boolean {
+export function shouldPass(category: InputCategory, options: NormalizedOptions): boolean {
   switch (category) {
     case "A":
       return true

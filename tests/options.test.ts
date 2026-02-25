@@ -1,9 +1,9 @@
 import { test, assert } from "vitest"
-import { normalizeFeatureOptions } from "../src/types.js"
+import { normalizeOptions } from "../src/types.js"
 
 // undefined はデフォルト値を返すことを確認する
-test("normalizeFeatureOptions: undefined はデフォルト値を返す", () => {
-  const result = normalizeFeatureOptions(undefined)
+test("normalizeOptions: undefined はデフォルト値を返す", () => {
+  const result = normalizeOptions(undefined)
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
@@ -11,8 +11,8 @@ test("normalizeFeatureOptions: undefined はデフォルト値を返す", () => 
 })
 
 // 空オブジェクトはデフォルト値を返すことを確認する
-test("normalizeFeatureOptions: 空オブジェクトはデフォルト値を返す", () => {
-  const result = normalizeFeatureOptions({})
+test("normalizeOptions: 空オブジェクトはデフォルト値を返す", () => {
+  const result = normalizeOptions({})
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
@@ -20,8 +20,8 @@ test("normalizeFeatureOptions: 空オブジェクトはデフォルト値を返�
 })
 
 // allowDecorations のみ指定した場合の正規化を確認する
-test("normalizeFeatureOptions: allowDecorations のみ指定", () => {
-  const result = normalizeFeatureOptions({ allowDecorations: false })
+test("normalizeOptions: allowDecorations のみ指定", () => {
+  const result = normalizeOptions({ allowDecorations: false })
   assert.deepStrictEqual(result, {
     allowDecorations: false,
     allowAttributes: true,
@@ -29,8 +29,8 @@ test("normalizeFeatureOptions: allowDecorations のみ指定", () => {
 })
 
 // allowAttributes のみ指定した場合の正規化を確認する
-test("normalizeFeatureOptions: allowAttributes のみ指定", () => {
-  const result = normalizeFeatureOptions({ allowAttributes: false })
+test("normalizeOptions: allowAttributes のみ指定", () => {
+  const result = normalizeOptions({ allowAttributes: false })
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: false,
@@ -38,8 +38,8 @@ test("normalizeFeatureOptions: allowAttributes のみ指定", () => {
 })
 
 // 両方 false を指定した場合の正規化を確認する
-test("normalizeFeatureOptions: 両方 false を指定", () => {
-  const result = normalizeFeatureOptions({
+test("normalizeOptions: 両方 false を指定", () => {
+  const result = normalizeOptions({
     allowDecorations: false,
     allowAttributes: false,
   })
@@ -50,8 +50,8 @@ test("normalizeFeatureOptions: 両方 false を指定", () => {
 })
 
 // 両方 true を明示指定した場合の正規化を確認する
-test("normalizeFeatureOptions: 両方 true を明示指定", () => {
-  const result = normalizeFeatureOptions({
+test("normalizeOptions: 両方 true を明示指定", () => {
+  const result = normalizeOptions({
     allowDecorations: true,
     allowAttributes: true,
   })
