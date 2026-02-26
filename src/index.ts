@@ -6,6 +6,7 @@ export {
   TagConfigSchema,
   NormalizedOptionsSchema,
   normalizeOptions,
+  isReservedDelimChar,
 } from "./types.js"
 export { TokenKind, TokenSchema, type Token } from "./token.js"
 export {
