@@ -109,3 +109,81 @@ test("tokenizer error: placeholder disallowed when allowPlaceholders=false", () 
   assert.instanceOf(error, Error)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
+
+// --- カスタムデリミタのエラーケース ---
+
+// 属性値に JSON として不正かつ境界でもない文字がある場合は失敗することを確認する
+test("tokenizer error: invalid json value start character fails", () => {
+  expectTokenizerErrorWithPosition("<A attr=@ />")
+})
+
+// タグ内部で / の直後が閉じデリミタでない場合は失敗することを確認する
+test("tokenizer error: invalid slash token inside tag fails", () => {
+  expectTokenizerErrorWithPosition("<A /x>")
+})
+
+// カスタムデリミタで未終了の文字列属性はエラーになることを確認する
+test("tokenizer error: custom delimiter unterminated string fails", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  let error: unknown
+  try {
+    otPipe.tokenize('|A name="Lumina /|')
+  } catch (caught) {
+    error = caught
+  }
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// カスタムデリミタで属性値が欠落している場合はエラーになることを確認する
+test("tokenizer error: custom delimiter missing attribute value fails", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  let error: unknown
+  try {
+    otPipe.tokenize("|A level= /|")
+  } catch (caught) {
+    error = caught
+  }
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// カスタムデリミタで readJsonValue のエラーメッセージに正しい閉じデリミタが含まれることを確認する
+test("tokenizer error: custom delimiter readJsonValue error contains correct closing delimiter", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  let error: unknown
+  try {
+    otPipe.tokenize("|A level= /|")
+  } catch (caught) {
+    error = caught
+  }
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  const message = (error as Error).message
+  assert.include(message, "/|")
+  assert.notInclude(message, "/>")
+})
+
+// カスタムデリミタで不正文字はエラーになることを確認する
+test("tokenizer error: custom delimiter invalid character fails", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  let error: unknown
+  try {
+    otPipe.tokenize("|A@ /|")
+  } catch (caught) {
+    error = caught
+  }
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})

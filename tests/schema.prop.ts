@@ -88,7 +88,7 @@ test("schema decoration: rejects names with invalid chars", () => {
 
 // --- Placeholder関連 ---
 
-const validPlaceholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]+$/)
+const validPlaceholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]*$/)
 const invalidPlaceholderNameArb = fc.oneof(
   fc.constant(""),
   fc.stringMatching(/^[0-9][a-zA-Z0-9-]*$/),
@@ -160,6 +160,39 @@ test("schema token: accepts valid token structure", () => {
       (kind, position, value) => {
         const result = TokenSchema.safeParse({ kind, position, value })
         assert.isTrue(result.success)
+      },
+    ),
+  )
+})
+
+// pairIndex 付きの Token もバリデーション成功することを確認する
+test("schema token: accepts token with pairIndex", () => {
+  const delimiterKindValues = ["LT", "LT_SLASH", "GT", "SLASH_GT"] as const
+  fc.assert(
+    fc.property(
+      fc.constantFrom(...delimiterKindValues),
+      fc.nat(),
+      fc.string(),
+      fc.nat(),
+      (kind, position, value, pairIndex) => {
+        const result = TokenSchema.safeParse({ kind, position, value, pairIndex })
+        assert.isTrue(result.success)
+      },
+    ),
+  )
+})
+
+// pairIndex が負数の Token はバリデーション失敗することを確認する
+test("schema token: rejects negative pairIndex", () => {
+  fc.assert(
+    fc.property(
+      fc.constantFrom("LT" as const, "GT" as const),
+      fc.nat(),
+      fc.string(),
+      fc.integer({ max: -1 }),
+      (kind, position, value, pairIndex) => {
+        const result = TokenSchema.safeParse({ kind, position, value, pairIndex })
+        assert.isFalse(result.success)
       },
     ),
   )
@@ -268,6 +301,22 @@ test("schema document node: accepts valid document node", () => {
 
 // --- NormalizedOptions関連 ---
 
+import { ALLOWED_DELIMITER_CHARS } from "../src/types.js"
+
+const allowedCharsArray = [...ALLOWED_DELIMITER_CHARS]
+
+// validateTags 互換の arbitrary: 異なるペア間で文字が重複しない tags を生成
+const validTagsArb = fc
+  .shuffledSubarray(allowedCharsArray, { minLength: 2, maxLength: 6 })
+  .map((chars) => {
+    const pairs: { opening: string; closing: string }[] = []
+    for (let index = 0; index + 1 < chars.length; index += 2) {
+      pairs.push({ opening: chars[index], closing: chars[index + 1] })
+    }
+    return pairs
+  })
+  .filter((pairs) => pairs.length >= 1)
+
 // NormalizedOptionsSchema が有効な値を受理することを確認する
 test("schema normalized feature options: accepts valid options", () => {
   fc.assert(
@@ -275,11 +324,13 @@ test("schema normalized feature options: accepts valid options", () => {
       fc.boolean(),
       fc.boolean(),
       fc.boolean(),
-      (allowDecorations, allowAttributes, allowPlaceholders) => {
+      validTagsArb,
+      (allowDecorations, allowAttributes, allowPlaceholders, tags) => {
         const result = NormalizedOptionsSchema.safeParse({
           allowDecorations,
           allowAttributes,
           allowPlaceholders,
+          tags,
         })
         assert.isTrue(result.success)
       },
@@ -293,6 +344,53 @@ test("schema normalized feature options: rejects non-boolean values", () => {
     allowDecorations: "yes",
     allowAttributes: 1,
     allowPlaceholders: "no",
+    tags: [{ opening: "<", closing: ">" }],
+  })
+  assert.isFalse(result.success)
+})
+
+// tags が空配列の場合は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects empty tags array", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
+    tags: [],
+  })
+  assert.isFalse(result.success)
+})
+
+// 許可文字外の opening を含む tags は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects tags with disallowed characters", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
+    tags: [{ opening: "a", closing: ">" }],
+  })
+  assert.isFalse(result.success)
+})
+
+// 異なるペア間で重複する文字を含む tags は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects tags with duplicate characters across pairs", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "<", closing: "!" },
+    ],
+  })
+  assert.isFalse(result.success)
+})
+
+// tags が欠落している場合は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects missing tags", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
   })
   assert.isFalse(result.success)
 })
