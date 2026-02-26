@@ -219,10 +219,10 @@ test("tokenizer: percent delimiter tokenizes open and close tag", () => {
   assert.deepStrictEqual(kinds, ["LT", "IDENT", "GT", "LT_SLASH", "IDENT", "GT", "EOF"])
 })
 
-// 非対称デリミタ（{ と }）で自己閉じタグをトークン化できることを確認する
+// 非対称デリミタ（@ と #）で自己閉じタグをトークン化できることを確認する
 test("tokenizer: asymmetric delimiters tokenize self-closing tag", () => {
-  const otBraces = new onlytag({ tags: [{ opening: "{", closing: "}" }] })
-  const tokens = otBraces.tokenize("{A /}")
+  const otAsym = new onlytag({ tags: [{ opening: "@", closing: "#" }] })
+  const tokens = otAsym.tokenize("@A /#")
   const kinds = tokens.map((t) => t.kind)
   assert.deepStrictEqual(kinds, ["LT", "IDENT", "SLASH_GT", "EOF"])
 })

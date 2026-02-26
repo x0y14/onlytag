@@ -36,13 +36,17 @@ export interface NormalizedOptions {
  * @param ch - 判定対象の1文字
  * @returns 無効なデリミタ文字であれば true
  */
-function isReservedDelimChar(ch: string): boolean {
+export function isReservedDelimChar(ch: string): boolean {
   if (ch.length !== 1) return true
   const c = ch.charCodeAt(0)
+  if (c <= 32 || c === 127) return true // 制御文字 (0-31)・空白 (32)・DEL (127)
   if ((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57)) return true // [a-zA-Z0-9]
-  if (c === 95 || c === 45) return true // _ -
-  if (c === 46 || c === 61 || c === 34 || c === 47) return true // . = " /
-  if (c === 32 || c === 9 || c === 10 || c === 13) return true // whitespace
+  if (c === 95 || c === 45) return true // _ - (識別子文字)
+  if (c === 46 || c === 61 || c === 34 || c === 47) return true // . = " / (decoration先頭・属性区切り・クォート・閉じタグ)
+  if (c === 39 || c === 96 || c === 92) return true // ' ` \ (文字列クォート・JSONエスケープ)
+  if (c === 123 || c === 125 || c === 91 || c === 93) return true // { } [ ] (JSON開始文字)
+  if (c === 40 || c === 41) return true // ( ) (将来の構文予約)
+  if (c === 44) return true // , (JSON内区切り)
   return false
 }
 

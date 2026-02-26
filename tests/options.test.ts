@@ -131,3 +131,63 @@ test("normalizeOptions: アンダースコアを opening に使うとエラー",
 test("normalizeOptions: ハイフンを closing に使うとエラー", () => {
   assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "-" }] }), /invalid closing delimiter/)
 })
+
+// シングルクォートを opening に使うとエラーになることを確認する
+test("normalizeOptions: シングルクォートを opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "'", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// バッククォートを closing に使うとエラーになることを確認する
+test("normalizeOptions: バッククォートを closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "`" }] }), /invalid closing delimiter/)
+})
+
+// バックスラッシュを opening に使うとエラーになることを確認する
+test("normalizeOptions: バックスラッシュを opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "\\", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 開き波括弧を opening に使うとエラーになることを確認する
+test("normalizeOptions: 開き波括弧を opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "{", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 閉じ波括弧を closing に使うとエラーになることを確認する
+test("normalizeOptions: 閉じ波括弧を closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "}" }] }), /invalid closing delimiter/)
+})
+
+// 開き角括弧を opening に使うとエラーになることを確認する
+test("normalizeOptions: 開き角括弧を opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "[", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 閉じ角括弧を closing に使うとエラーになることを確認する
+test("normalizeOptions: 閉じ角括弧を closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "]" }] }), /invalid closing delimiter/)
+})
+
+// 開き丸括弧を opening に使うとエラーになることを確認する
+test("normalizeOptions: 開き丸括弧を opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "(", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 閉じ丸括弧を closing に使うとエラーになることを確認する
+test("normalizeOptions: 閉じ丸括弧を closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: ")" }] }), /invalid closing delimiter/)
+})
+
+// カンマを opening に使うとエラーになることを確認する
+test("normalizeOptions: カンマを opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: ",", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 制御文字を opening に使うとエラーになることを確認する
+test("normalizeOptions: 制御文字を opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "\x01", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// DEL (0x7F) を closing に使うとエラーになることを確認する
+test("normalizeOptions: DEL を closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "\x7f" }] }), /invalid closing delimiter/)
+})
