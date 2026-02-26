@@ -236,3 +236,39 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
+
+// 変数参照属性をvariableRefsに格納できることを確認する
+test("parser: parses variable ref attribute into variableRefs", () => {
+  const doc = ot.parse(ot.tokenize("<Card ref=$myVar />"))
+  const card = doc.children[0]
+  assert.deepStrictEqual(card.variableRefs, { ref: "myVar" })
+  assert.deepStrictEqual(card.attributes, {})
+})
+
+// 変数参照とJSON属性が混在しても正しく解析できることを確認する
+test("parser: parses mixed variable ref and json attributes", () => {
+  const doc = ot.parse(ot.tokenize('<Card ref=$myVar label="hello" />'))
+  const card = doc.children[0]
+  assert.deepStrictEqual(card.variableRefs, { ref: "myVar" })
+  assert.equal(card.attributes["label"], "hello")
+})
+
+// 変数参照とデコレーションが混在しても正しく解析できることを確認する
+test("parser: parses variable ref alongside decoration", () => {
+  const doc = ot.parse(ot.tokenize("<Card .elevated ref=$myVar />"))
+  const card = doc.children[0]
+  assert.equal(card.decorations[0].name, "elevated")
+  assert.deepStrictEqual(card.variableRefs, { ref: "myVar" })
+})
+
+// variableRefsが空のときは空オブジェクトであることを確認する
+test("parser: variableRefs is empty object when no variable refs", () => {
+  const doc = ot.parse(ot.tokenize('<Card label="hello" />'))
+  assert.deepStrictEqual(doc.children[0].variableRefs, {})
+})
+
+// ハイフン・アンダースコアを含む変数参照名をvariableRefsに格納できることを確認する
+test("parser: parses variable ref with hyphens and underscores", () => {
+  const doc = ot.parse(ot.tokenize("<Card ref=$my_var-1 />"))
+  assert.deepStrictEqual(doc.children[0].variableRefs, { ref: "my_var-1" })
+})

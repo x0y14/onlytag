@@ -12,12 +12,13 @@ export const DecorationSchema = z.object({
 /** デコレーションの型。英数字・ハイフン・アンダースコアからなる名前を持つ */
 export type Decoration = z.infer<typeof DecorationSchema>
 
-/** 要素ノードの型。タグ名・デコレーション・属性・子要素を持つ */
+/** 要素ノードの型。タグ名・デコレーション・属性・変数参照・子要素を持つ */
 export type ElementNode = {
   type: "element"
   tagName: string
   decorations: Decoration[]
   attributes: Record<string, JsonValue>
+  variableRefs: Record<string, string>
   children: ElementNode[]
   selfClosing: boolean
 }
@@ -29,6 +30,7 @@ export const ElementNodeSchema: z.ZodType<ElementNode> = z.lazy(() =>
     tagName: z.string().regex(/^[A-Za-z0-9_-]+$/),
     decorations: z.array(DecorationSchema),
     attributes: z.record(z.string(), JsonValueSchema),
+    variableRefs: z.record(z.string(), z.string().regex(/^[A-Za-z0-9_-]+$/)).default({}),
     children: z.array(ElementNodeSchema),
     selfClosing: z.boolean(),
   }),

@@ -68,3 +68,13 @@ test("tokenizer error: invalid null literal fails", () => {
 test("tokenizer error: missing boundary after json value fails", () => {
   expectTokenizerErrorWithPosition('<A config={"k":1}next=2 />')
 })
+
+// スタンドアロンの変数参照（属性値以外の位置）は失敗することを確認する
+test("tokenizer error: standalone variable ref fails", () => {
+  expectTokenizerErrorWithPosition("<Card .elevated $myVar />")
+})
+
+// $記号の直後に識別子がない変数参照は失敗することを確認する
+test("tokenizer error: variable ref without identifier fails", () => {
+  expectTokenizerErrorWithPosition("<Card ref=$ />")
+})

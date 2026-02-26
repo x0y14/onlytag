@@ -169,8 +169,23 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は JSON 値として読む
+    // EQUALS の直後は JSON 値または変数参照として読む
     if (lastKind === "EQUALS") {
+      if (pos < len && input[pos] === "$") {
+        const start = pos
+        pos++ // '$' をスキップ
+        if (pos >= len || !isIdentChar(input[pos])) {
+          const actual = pos < len ? `$${input[pos]}` : "$<eof>"
+          tokenError(
+            `invalid variable: expected=<$[identifier]>, actual=<${actual}>`,
+            start,
+          )
+        }
+        const identStart = pos
+        while (pos < len && isIdentChar(input[pos])) pos++
+        emit("DOLLAR_IDENT", "$" + input.slice(identStart, pos), start)
+        continue
+      }
       const start = pos
       const [value, newPos] = readJsonValue(input, pos)
       emit("JSON_VALUE", value, start)
@@ -239,6 +254,13 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
             start,
           )
         }
+        break
+
+      case "$":
+        tokenError(
+          `variables are only allowed as attribute values: found variable at position`,
+          start,
+        )
         break
 
       default:
@@ -316,6 +338,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     // デコレーションと属性
     const decorations: Decoration[] = []
     const attributes: Record<string, JsonValue> = {}
+    const variableRefs: Record<string, string> = {}
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
@@ -332,17 +355,22 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
-        const jsonToken = expect("JSON_VALUE")
-        const parsed = decodeJsonString(jsonToken.value)
-        if (!parsed.success) {
-          const detail = parsed.error.issues[0]!.message
-          parseError(
-            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
-            jsonToken.position,
-          )
+        if (peek().kind === "DOLLAR_IDENT") {
+          const varToken = advance()
+          variableRefs[attrName] = varToken.value.slice(1) // '$' を除いた変数名
+        } else {
+          const jsonToken = expect("JSON_VALUE")
+          const parsed = decodeJsonString(jsonToken.value)
+          if (!parsed.success) {
+            const detail = parsed.error.issues[0]!.message
+            parseError(
+              `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+              jsonToken.position,
+            )
+          }
+          encodeJsonValue(parsed.data as JsonValue)
+          attributes[attrName] = parsed.data as JsonValue
         }
-        encodeJsonValue(parsed.data as JsonValue)
-        attributes[attrName] = parsed.data as JsonValue
       }
     }
 
@@ -354,6 +382,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         tagName,
         decorations,
         attributes,
+        variableRefs,
         children: [],
         selfClosing: true,
       }
@@ -393,6 +422,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       tagName,
       decorations,
       attributes,
+      variableRefs,
       children,
       selfClosing: false,
     }

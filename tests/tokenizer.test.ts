@@ -169,3 +169,19 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   const value = tokens.find((t) => t.kind === "JSON_VALUE")
   assert.equal(value!.value, '{"k":1}')
 })
+
+// 変数参照を属性値としてDOLLAR_IDENTトークンに変換できることを確認する
+test("tokenizer: variable ref as attribute value emits DOLLAR_IDENT", () => {
+  const tokens = ot.tokenize("<Card ref=$myVar />")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "IDENT", "EQUALS", "DOLLAR_IDENT", "SLASH_GT", "EOF"])
+  const dollarToken = tokens.find((t) => t.kind === "DOLLAR_IDENT")
+  assert.equal(dollarToken!.value, "$myVar")
+})
+
+// 変数参照がIDENT文字（英数字・アンダースコア・ハイフン）を含む識別子を受理することを確認する
+test("tokenizer: variable ref accepts allowed identifier characters", () => {
+  const tokens = ot.tokenize("<Card ref=$my_var-1 />")
+  const dollarToken = tokens.find((t) => t.kind === "DOLLAR_IDENT")
+  assert.equal(dollarToken!.value, "$my_var-1")
+})
