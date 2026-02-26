@@ -145,7 +145,7 @@ test("schema token: rejects invalid kind", () => {
 
 // --- ElementNode関連 ---
 
-const tagNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/)
+const tagNameArb = fc.stringMatching(/^[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?$/)
 
 // letrec 内の再帰と組み合わせてもスタックオーバーフローしないよう、
 // 属性値はフラットなプリミティブのみにする

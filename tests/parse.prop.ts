@@ -9,6 +9,7 @@ function hasPositionHint(message: string): boolean {
 }
 
 const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/)
+const tagNameArb = fc.stringMatching(/^[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?$/)
 const safeIdentArb = identArb.filter((value) => value !== "__proto__")
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
 function hasProtoKey(value: unknown): boolean {
@@ -36,7 +37,7 @@ const mixedHeaderPartArb = fc.oneof(
 
 const selfClosingElementArb = fc
   .record({
-    tag: identArb,
+    tag: tagNameArb,
     headerParts: fc.array(headerPartArb, { maxLength: 5 }),
   })
   .map(({ tag, headerParts }) => {
@@ -47,7 +48,7 @@ const selfClosingElementArb = fc
 
 const nestedElementArb = fc
   .record({
-    tag: identArb,
+    tag: tagNameArb,
     children: fc.array(selfClosingElementArb, { minLength: 1, maxLength: 3 }),
   })
   .map(({ tag, children }) => `<${tag}>${children.join("")}</${tag}>`)
@@ -105,7 +106,7 @@ test("parse property: random attr and deco order is parsed correctly", () => {
   fc.assert(
     fc.property(
       fc.record({
-        tag: identArb,
+        tag: tagNameArb,
         parts: fc.array(mixedHeaderPartArb, { maxLength: 10 }),
       }),
       ({ tag, parts }) => {

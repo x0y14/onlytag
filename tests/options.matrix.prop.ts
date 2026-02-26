@@ -11,6 +11,9 @@ const optionsArb = fc.record({
 /** 有効な識別子 */
 const identArb = fc.stringMatching(/^[A-Za-z][A-Za-z0-9_-]{0,9}$/)
 
+/** 有効なタグ名 */
+const tagNameArb = fc.stringMatching(/^[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?$/)
+
 /** decoration 文字列 */
 const decorationArb = identArb.map((name) => `.${name}`)
 
@@ -21,22 +24,22 @@ const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
 const attributeArb = fc.tuple(identArb, jsonLiteralArb).map(([key, value]) => `${key}=${value}`)
 
 /** カテゴリ A: タグのみ */
-const tagOnlyInputArb = identArb.map((tag) => `<${tag} />`)
+const tagOnlyInputArb = tagNameArb.map((tag) => `<${tag} />`)
 
 /** カテゴリ B: decoration のみ */
 const decoOnlyInputArb = fc
-  .tuple(identArb, fc.array(decorationArb, { minLength: 1, maxLength: 3 }))
+  .tuple(tagNameArb, fc.array(decorationArb, { minLength: 1, maxLength: 3 }))
   .map(([tag, decos]) => `<${tag} ${decos.join(" ")} />`)
 
 /** カテゴリ C: attribute のみ */
 const attrOnlyInputArb = fc
-  .tuple(identArb, fc.array(attributeArb, { minLength: 1, maxLength: 3 }))
+  .tuple(tagNameArb, fc.array(attributeArb, { minLength: 1, maxLength: 3 }))
   .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
 
 /** カテゴリ D: 両方 */
 const bothInputArb = fc
   .tuple(
-    identArb,
+    tagNameArb,
     fc.array(decorationArb, { minLength: 1, maxLength: 2 }),
     fc.array(attributeArb, { minLength: 1, maxLength: 2 }),
   )

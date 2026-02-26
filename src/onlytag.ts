@@ -293,6 +293,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     expect("LT")
     const tagToken = expect("IDENT")
     const tagName = tagToken.value
+    if (!/^[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?$/.test(tagName)) {
+      parseError(
+        `invalid tag name: expected=<[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?>, actual=<${tagName}>`,
+        tagToken.position,
+      )
+    }
 
     // デコレーションと属性
     const decorations: Decoration[] = []

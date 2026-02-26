@@ -95,3 +95,13 @@ test("parser error: invalid json token payload fails in parse stage", () => {
   assert.match((error as Error).message, /invalid json attribute/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
+
+// 数字で始まるタグ名は失敗することを確認する
+test("parser error: tag name starting with digit fails", () => {
+  expectParserErrorWithPosition("<1tag />")
+})
+
+// ハイフンで終わるタグ名は失敗することを確認する
+test("parser error: tag name ending with hyphen fails", () => {
+  expectParserErrorWithPosition("<my-tag- />")
+})

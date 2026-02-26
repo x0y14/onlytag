@@ -236,3 +236,16 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
+
+// 末尾に数字を含むタグ名を構文解析できることを確認する
+test("parser: parses tag name ending with digit", () => {
+  const doc = ot.parse(ot.tokenize("<h1 />"))
+  assert.equal(doc.children[0].tagName, "h1")
+})
+
+// 中間に数字を含むタグ名を構文解析できることを確認する
+test("parser: parses tag name with digit in middle", () => {
+  const doc = ot.parse(ot.tokenize("<section2><h1 /></section2>"))
+  assert.equal(doc.children[0].tagName, "section2")
+  assert.equal(doc.children[0].children[0].tagName, "h1")
+})

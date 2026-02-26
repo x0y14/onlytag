@@ -26,7 +26,7 @@ export type ElementNode = {
 export const ElementNodeSchema: z.ZodType<ElementNode> = z.lazy(() =>
   z.object({
     type: z.literal("element"),
-    tagName: z.string().regex(/^[A-Za-z0-9_-]+$/),
+    tagName: z.string().regex(/^[A-Za-z_]([A-Za-z0-9_-]*[A-Za-z0-9_])?$/),
     decorations: z.array(DecorationSchema),
     attributes: z.record(z.string(), JsonValueSchema),
     children: z.array(ElementNodeSchema),

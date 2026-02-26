@@ -162,3 +162,15 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   const value = tokens.find((t) => t.kind === "JSON_VALUE")
   assert.equal(value!.value, '{"k":1}')
 })
+
+// 数字を含むタグ名をIDENTトークンとして取得できることを確認する
+test("tokenizer: tag name with trailing digit", () => {
+  const tokens = ot.tokenize("<h1 />")
+  assert.equal(tokens.find((t) => t.kind === "IDENT")!.value, "h1")
+})
+
+// 数字を途中に含むタグ名をIDENTトークンとして取得できることを確認する
+test("tokenizer: tag name with digit in middle", () => {
+  const tokens = ot.tokenize("<section2 />")
+  assert.equal(tokens.find((t) => t.kind === "IDENT")!.value, "section2")
+})
