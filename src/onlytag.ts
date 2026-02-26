@@ -1,5 +1,5 @@
 import type { Token, TokenKind } from "./token.js"
-import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js"
+import type { DocumentNode, ElementNode, Decoration, JsonValue, PlaceholderNode } from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions } from "./types.js"
 import { normalizeOptions } from "./types.js"
@@ -81,6 +81,31 @@ function canStartJsonValue(ch: string): boolean {
     ch === "t" ||
     ch === "f" ||
     ch === "n"
+  )
+}
+
+/**
+ * 文字がプレースホルダー名の先頭文字として有効かどうかを判定する（[a-zA-Z]）
+ * @param ch - 判定対象の1文字
+ * @returns 先頭文字として有効であればtrue
+ */
+function isPlaceholderStartChar(ch: string): boolean {
+  const c = ch.charCodeAt(0)
+  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122)
+}
+
+/**
+ * 文字がプレースホルダー名の本体文字として有効かどうかを判定する（[0-9a-zA-Z-]）
+ * @param ch - 判定対象の1文字
+ * @returns 本体文字として有効であればtrue
+ */
+function isPlaceholderBodyChar(ch: string): boolean {
+  const c = ch.charCodeAt(0)
+  return (
+    (c >= 65 && c <= 90) || // A-Z
+    (c >= 97 && c <= 122) || // a-z
+    (c >= 48 && c <= 57) || // 0-9
+    c === 45 // -
   )
 }
 
@@ -169,12 +194,33 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は JSON 値として読む
+    // EQUALS の直後は JSON 値または placeholder として読む
     if (lastKind === "EQUALS") {
-      const start = pos
-      const [value, newPos] = readJsonValue(input, pos)
-      emit("JSON_VALUE", value, start)
-      pos = newPos
+      if (pos < len && input[pos] === "$") {
+        const start = pos
+        pos++ // '$' をスキップ
+        if (pos >= len || !isPlaceholderStartChar(input[pos])) {
+          const actual = pos < len ? input[pos] : "<eof>"
+          tokenError(
+            `invalid placeholder: expected=<$[a-zA-Z][0-9a-zA-Z-]*>, actual=<${input.slice(start, pos)}${actual}>`,
+            start,
+          )
+        }
+        pos++ // 先頭文字をスキップ
+        while (pos < len && isPlaceholderBodyChar(input[pos])) pos++
+        if (!isJsonBoundary(input, pos)) {
+          tokenError(
+            `invalid placeholder: unexpected character after placeholder, actual=<${input[pos]}>`,
+            pos,
+          )
+        }
+        emit("PLACEHOLDER", input.slice(start, pos), start)
+      } else {
+        const start = pos
+        const [value, newPos] = readJsonValue(input, pos)
+        emit("JSON_VALUE", value, start)
+        pos = newPos
+      }
       continue
     }
 
@@ -315,7 +361,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
     // デコレーションと属性
     const decorations: Decoration[] = []
-    const attributes: Record<string, JsonValue> = {}
+    const attributes: Record<string, JsonValue | PlaceholderNode> = {}
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
@@ -332,17 +378,22 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
-        const jsonToken = expect("JSON_VALUE")
-        const parsed = decodeJsonString(jsonToken.value)
-        if (!parsed.success) {
-          const detail = parsed.error.issues[0]!.message
-          parseError(
-            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
-            jsonToken.position,
-          )
+        if (peek().kind === "PLACEHOLDER") {
+          const placeholderToken = advance()
+          attributes[attrName] = { type: "placeholder", name: placeholderToken.value }
+        } else {
+          const jsonToken = expect("JSON_VALUE")
+          const parsed = decodeJsonString(jsonToken.value)
+          if (!parsed.success) {
+            const detail = parsed.error.issues[0]!.message
+            parseError(
+              `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+              jsonToken.position,
+            )
+          }
+          encodeJsonValue(parsed.data as JsonValue)
+          attributes[attrName] = parsed.data as JsonValue
         }
-        encodeJsonValue(parsed.data as JsonValue)
-        attributes[attrName] = parsed.data as JsonValue
       }
     }
 

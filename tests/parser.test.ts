@@ -236,3 +236,43 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
+
+// プレースホルダー属性を持つ自己閉じタグを解析できることを確認する
+test("parser: parses placeholder attribute in self-closing tag", () => {
+  const doc = ot.parse(ot.tokenize("<tagname attrPlaceholder=$abc />"))
+  assert.equal(doc.children.length, 1)
+  assert.deepStrictEqual(doc.children[0].attributes["attrPlaceholder"], {
+    type: "placeholder",
+    name: "$abc",
+  })
+})
+
+// デコレーションとJSON属性とプレースホルダー属性が混在するタグを解析できることを確認する
+test("parser: parses decoration, json attr, and placeholder attr together", () => {
+  const doc = ot.parse(ot.tokenize("<tagname .deco attrJson={} attrPlaceholder=$abc />"))
+  const node = doc.children[0]
+  assert.equal(node.decorations.length, 1)
+  assert.equal(node.decorations[0].name, "deco")
+  assert.deepStrictEqual(node.attributes["attrJson"], {})
+  assert.deepStrictEqual(node.attributes["attrPlaceholder"], {
+    type: "placeholder",
+    name: "$abc",
+  })
+})
+
+// 同じプレースホルダー名を複数属性の値として使えることを確認する
+test("parser: allows duplicate placeholder names as attribute values", () => {
+  const doc = ot.parse(ot.tokenize("<tagname ph1=$abc ph2=$abc />"))
+  const node = doc.children[0]
+  assert.deepStrictEqual(node.attributes["ph1"], { type: "placeholder", name: "$abc" })
+  assert.deepStrictEqual(node.attributes["ph2"], { type: "placeholder", name: "$abc" })
+})
+
+// 開閉タグでのプレースホルダー属性を解析できることを確認する
+test("parser: parses placeholder attribute in open-close tag", () => {
+  const doc = ot.parse(ot.tokenize("<tagname attr=$ph></tagname>"))
+  assert.deepStrictEqual(doc.children[0].attributes["attr"], {
+    type: "placeholder",
+    name: "$ph",
+  })
+})

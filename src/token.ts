@@ -10,6 +10,7 @@ export const TokenKind = z.enum([
   "DOT_IDENT", // .デコレーション（ドット含む）
   "EQUALS", // =
   "JSON_VALUE", // JSON値の生文字列
+  "PLACEHOLDER", // プレースホルダー（$[a-zA-Z][0-9a-zA-Z-]*）
   "EOF",
 ])
 /** トークン種別の型 */

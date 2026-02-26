@@ -169,3 +169,37 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   const value = tokens.find((t) => t.kind === "JSON_VALUE")
   assert.equal(value!.value, '{"k":1}')
 })
+
+// プレースホルダー属性をPLACEHOLDERトークンとして取得できることを確認する
+test("tokenizer: placeholder attribute emits PLACEHOLDER token", () => {
+  const tokens = ot.tokenize("<tagname attrPlaceholder=$abc />")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "IDENT", "EQUALS", "PLACEHOLDER", "SLASH_GT", "EOF"])
+  const ph = tokens.find((t) => t.kind === "PLACEHOLDER")
+  assert.equal(ph!.value, "$abc")
+})
+
+// 複数のプレースホルダー属性を順に取得できることを確認する
+test("tokenizer: multiple placeholder attributes", () => {
+  const tokens = ot.tokenize("<tagname ph1=$foo ph2=$bar-baz />")
+  const placeholders = tokens.filter((t) => t.kind === "PLACEHOLDER")
+  assert.equal(placeholders.length, 2)
+  assert.equal(placeholders[0].value, "$foo")
+  assert.equal(placeholders[1].value, "$bar-baz")
+})
+
+// JSON属性とプレースホルダー属性が混在する場合を取得できることを確認する
+test("tokenizer: mixed json and placeholder attributes", () => {
+  const tokens = ot.tokenize("<tagname .deco attrJson={} attrPlaceholder=$abc />")
+  const jsonVals = tokens.filter((t) => t.kind === "JSON_VALUE").map((t) => t.value)
+  const placeholders = tokens.filter((t) => t.kind === "PLACEHOLDER").map((t) => t.value)
+  assert.deepStrictEqual(jsonVals, ["{}"])
+  assert.deepStrictEqual(placeholders, ["$abc"])
+})
+
+// 開閉タグでプレースホルダー属性を取得できることを確認する
+test("tokenizer: placeholder attribute in open-close tag", () => {
+  const tokens = ot.tokenize("<tagname attr=$ph></tagname>")
+  const ph = tokens.find((t) => t.kind === "PLACEHOLDER")
+  assert.equal(ph!.value, "$ph")
+})

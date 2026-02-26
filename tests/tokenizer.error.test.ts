@@ -68,3 +68,13 @@ test("tokenizer error: invalid null literal fails", () => {
 test("tokenizer error: missing boundary after json value fails", () => {
   expectTokenizerErrorWithPosition('<A config={"k":1}next=2 />')
 })
+
+// $のみのプレースホルダーは失敗することを確認する
+test("tokenizer error: bare dollar sign as placeholder fails", () => {
+  expectTokenizerErrorWithPosition("<A attr=$ />")
+})
+
+// $の直後が数字のプレースホルダーは失敗することを確認する
+test("tokenizer error: placeholder starting with digit after dollar fails", () => {
+  expectTokenizerErrorWithPosition("<A attr=$1abc />")
+})

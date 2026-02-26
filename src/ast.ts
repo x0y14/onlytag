@@ -5,6 +5,14 @@ export const JsonValueSchema = z.json()
 /** 任意のJSON値を表す型 */
 export type JsonValue = z.infer<typeof JsonValueSchema>
 
+/** プレースホルダーノードのZodスキーマ（$[a-zA-Z][0-9a-zA-Z-]*） */
+export const PlaceholderNodeSchema = z.object({
+  type: z.literal("placeholder"),
+  name: z.string().regex(/^\$[a-zA-Z][0-9a-zA-Z-]*$/),
+})
+/** プレースホルダーノードの型。属性値として使用できる */
+export type PlaceholderNode = z.infer<typeof PlaceholderNodeSchema>
+
 /** デコレーション（タグに付与される修飾子）のZodスキーマ */
 export const DecorationSchema = z.object({
   name: z.string().regex(/^[A-Za-z0-9_-]+$/),
@@ -12,12 +20,17 @@ export const DecorationSchema = z.object({
 /** デコレーションの型。英数字・ハイフン・アンダースコアからなる名前を持つ */
 export type Decoration = z.infer<typeof DecorationSchema>
 
+/** 属性値のZodスキーマ。JSONかプレースホルダーのいずれか */
+export const AttributeValueSchema = z.union([JsonValueSchema, PlaceholderNodeSchema])
+/** 属性値の型 */
+export type AttributeValue = z.infer<typeof AttributeValueSchema>
+
 /** 要素ノードの型。タグ名・デコレーション・属性・子要素を持つ */
 export type ElementNode = {
   type: "element"
   tagName: string
   decorations: Decoration[]
-  attributes: Record<string, JsonValue>
+  attributes: Record<string, JsonValue | PlaceholderNode>
   children: ElementNode[]
   selfClosing: boolean
 }
@@ -28,7 +41,7 @@ export const ElementNodeSchema: z.ZodType<ElementNode> = z.lazy(() =>
     type: z.literal("element"),
     tagName: z.string().regex(/^[A-Za-z0-9_-]+$/),
     decorations: z.array(DecorationSchema),
-    attributes: z.record(z.string(), JsonValueSchema),
+    attributes: z.record(z.string(), AttributeValueSchema),
     children: z.array(ElementNodeSchema),
     selfClosing: z.boolean(),
   }),

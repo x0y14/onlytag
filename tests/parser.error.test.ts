@@ -103,3 +103,23 @@ test("parser error: invalid json token payload fails in parse stage", () => {
   assert.match((error as Error).message, /invalid json attribute/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
+
+// $プレースホルダーをタグ名として使おうとすると失敗することを確認する
+test("parser error: placeholder as tag name fails", () => {
+  expectParserErrorWithPosition("<$placeholder />")
+})
+
+// $プレースホルダーをデコレーションとして使おうとすると失敗することを確認する
+test("parser error: placeholder as decoration fails", () => {
+  expectParserErrorWithPosition("<tagname .$placeholder />")
+})
+
+// $プレースホルダーを属性名として使おうとすると失敗することを確認する
+test("parser error: placeholder as attribute name fails", () => {
+  expectParserErrorWithPosition("<tagname $placeholder />")
+})
+
+// $プレースホルダーを属性名（値付き）として使おうとすると失敗することを確認する
+test("parser error: placeholder as attribute name with value fails", () => {
+  expectParserErrorWithPosition("<tagname $placeholder={} />")
+})
