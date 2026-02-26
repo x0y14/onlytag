@@ -116,3 +116,18 @@ test("normalizeOptions: スラッシュを opening に使うとエラー", () =>
 test("normalizeOptions: 空白文字を closing に使うとエラー", () => {
   assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: " " }] }), /invalid closing delimiter/)
 })
+
+// 2文字以上の文字列を opening に使うとエラーになることを確認する（長さチェック）
+test("normalizeOptions: 2文字以上の opening はエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<<", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// アンダースコアを opening に使うとエラーになることを確認する
+test("normalizeOptions: アンダースコアを opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "_", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// ハイフンを closing に使うとエラーになることを確認する
+test("normalizeOptions: ハイフンを closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "-" }] }), /invalid closing delimiter/)
+})
