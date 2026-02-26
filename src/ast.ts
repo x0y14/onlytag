@@ -20,8 +20,22 @@ export const DecorationSchema = z.object({
 /** デコレーションの型。英数字・ハイフン・アンダースコアからなる名前を持つ */
 export type Decoration = z.infer<typeof DecorationSchema>
 
-/** 属性値のZodスキーマ。JSONかプレースホルダーのいずれか */
-export const AttributeValueSchema = z.union([JsonValueSchema, PlaceholderNodeSchema])
+/** 属性値のZodスキーマ。JSONかプレースホルダーのいずれか
+ * ただし、type: "placeholder" を持つオブジェクトは必ず PlaceholderNodeSchema を満たす必要がある
+ */
+export const AttributeValueSchema = z.union([
+  PlaceholderNodeSchema,
+  z.json().refine(
+    (value) =>
+      !(
+        value !== null &&
+        typeof value === "object" &&
+        !Array.isArray(value) &&
+        (value as Record<string, unknown>).type === "placeholder"
+      ),
+    { message: 'Objects with type "placeholder" must match PlaceholderNodeSchema' },
+  ),
+])
 /** 属性値の型 */
 export type AttributeValue = z.infer<typeof AttributeValueSchema>
 
