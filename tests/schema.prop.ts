@@ -5,7 +5,7 @@ import {
   DecorationSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
-  LogicArgSchema,
+  FunctionArgSchema,
 } from "../src/ast.js"
 import { TokenSchema } from "../src/token.js"
 import { NormalizedOptionsSchema } from "../src/types.js"
@@ -224,12 +224,12 @@ test("schema normalized feature options: accepts valid options", () => {
       fc.boolean(),
       fc.boolean(),
       fc.boolean(),
-      (allowDecorations, allowAttributes, allowInject, allowLogic) => {
+      (allowDecorations, allowAttributes, allowVariable, allowFunction) => {
         const result = NormalizedOptionsSchema.safeParse({
           allowDecorations,
           allowAttributes,
-          allowInject,
-          allowLogic,
+          allowVariable,
+          allowFunction,
         })
         assert.isTrue(result.success)
       },
@@ -246,22 +246,22 @@ test("schema normalized feature options: rejects non-boolean values", () => {
   assert.isFalse(result.success)
 })
 
-// --- LogicArg関連 ---
+// --- FunctionArg関連 ---
 
-// JSON値はLogicArgとして受理されることを確認する（LogicArgSchemaのlazy評価を起動する）
-test("schema logic arg: accepts json value as logic arg", () => {
-  const result = LogicArgSchema.safeParse("hello")
+// JSON値はFunctionArgとして受理されることを確認する（FunctionArgSchemaのlazy評価を起動する）
+test("schema function arg: accepts json value as function arg", () => {
+  const result = FunctionArgSchema.safeParse("hello")
   assert.isTrue(result.success)
 })
 
-// InjectNodeはLogicArgとして受理されることを確認する
-test("schema logic arg: accepts inject node as logic arg", () => {
-  const result = LogicArgSchema.safeParse({ type: "inject", name: "mode" })
+// VariableNodeはFunctionArgとして受理されることを確認する
+test("schema function arg: accepts variable node as function arg", () => {
+  const result = FunctionArgSchema.safeParse({ type: "variable", name: "mode" })
   assert.isTrue(result.success)
 })
 
-// LogicNodeはLogicArgとして受理されることを確認する
-test("schema logic arg: accepts logic node as logic arg", () => {
-  const result = LogicArgSchema.safeParse({ type: "logic", name: "equal", args: [1, "dark"] })
+// FunctionNodeはFunctionArgとして受理されることを確認する
+test("schema function arg: accepts function node as function arg", () => {
+  const result = FunctionArgSchema.safeParse({ type: "function", name: "equal", args: [1, "dark"] })
   assert.isTrue(result.success)
 })

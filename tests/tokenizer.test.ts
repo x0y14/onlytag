@@ -170,28 +170,28 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   assert.equal(value!.value, '{"k":1}')
 })
 
-// inject属性をINJECTトークンとして取得できることを確認する
-test("tokenizer: inject attribute emits INJECT token", () => {
+// variable属性をVARIABLEトークンとして取得できることを確認する
+test("tokenizer: variable attribute emits VARIABLE token", () => {
   const tokens = ot.tokenize("<A mode=$dark />")
-  const inject = tokens.find((t) => t.kind === "INJECT")
-  assert.isDefined(inject)
-  assert.equal(inject!.value, "$dark")
+  const variable = tokens.find((t) => t.kind === "VARIABLE")
+  assert.isDefined(variable)
+  assert.equal(variable!.value, "$dark")
 })
 
-// ロジック属性をINJECT・LPAREN・JSON_VALUE・RPAREN等のトークンとして取得できることを確認する
-test("tokenizer: logic attribute emits structured tokens", () => {
+// 関数属性をVARIABLE・LPAREN・JSON_VALUE・RPAREN等のトークンとして取得できることを確認する
+test("tokenizer: function attribute emits structured tokens", () => {
   const tokens = ot.tokenize('<A cond=equal($mode,"dark") />')
   const kinds = tokens.map((t) => t.kind)
   assert.include(kinds, "IDENT") // function name
   assert.include(kinds, "LPAREN")
-  assert.include(kinds, "INJECT")
+  assert.include(kinds, "VARIABLE")
   assert.include(kinds, "COMMA")
   assert.include(kinds, "JSON_VALUE")
   assert.include(kinds, "RPAREN")
 })
 
-// 複数引数を持つロジックをトークン化できることを確認する
-test("tokenizer: logic with multiple args emits correct tokens", () => {
+// 複数引数を持つ関数をトークン化できることを確認する
+test("tokenizer: function with multiple args emits correct tokens", () => {
   const tokens = ot.tokenize("<A v=add(1,2) />")
   const values = tokens
     .filter((t) => t.kind === "JSON_VALUE")
@@ -199,8 +199,8 @@ test("tokenizer: logic with multiple args emits correct tokens", () => {
   assert.deepStrictEqual(values, ["1", "2"])
 })
 
-// ネストしたロジックをトークン化できることを確認する
-test("tokenizer: nested logic emits correct tokens", () => {
+// ネストした関数をトークン化できることを確認する
+test("tokenizer: nested function emits correct tokens", () => {
   const tokens = ot.tokenize('<A v=outer(inner($x,"y"),1) />')
   const kinds = tokens.map((t) => t.kind)
   // outer( inner( $x , "y" ) , 1 )
@@ -209,16 +209,16 @@ test("tokenizer: nested logic emits correct tokens", () => {
   assert.equal(kinds.filter((k) => k === "COMMA").length, 2)
 })
 
-// inject のみの引数リストを持つロジックをトークン化できることを確認する
-test("tokenizer: logic with inject-only arg", () => {
+// variable のみの引数リストを持つ関数をトークン化できることを確認する
+test("tokenizer: function with variable-only arg", () => {
   const tokens = ot.tokenize("<A v=check($flag) />")
-  const inject = tokens.find((t) => t.kind === "INJECT")
-  assert.isDefined(inject)
-  assert.equal(inject!.value, "$flag")
+  const variable = tokens.find((t) => t.kind === "VARIABLE")
+  assert.isDefined(variable)
+  assert.equal(variable!.value, "$flag")
 })
 
-// 空引数リストのロジックをトークン化できることを確認する
-test("tokenizer: logic with empty args", () => {
+// 空引数リストの関数をトークン化できることを確認する
+test("tokenizer: function with empty args", () => {
   const tokens = ot.tokenize("<A v=now() />")
   const kinds = tokens.map((t) => t.kind)
   assert.include(kinds, "LPAREN")

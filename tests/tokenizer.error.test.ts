@@ -69,12 +69,12 @@ test("tokenizer error: missing boundary after json value fails", () => {
   expectTokenizerErrorWithPosition('<A config={"k":1}next=2 />')
 })
 
-// $の後に識別子文字がない場合のinjectは失敗することを確認する
-test("tokenizer error: inject with no ident after dollar fails", () => {
+// $の後に識別子文字がない場合のvariableは失敗することを確認する
+test("tokenizer error: variable with no ident after dollar fails", () => {
   expectTokenizerErrorWithPosition("<A v=$ />")
 })
 
-// ロジック引数内の不正なJSON値は失敗することを確認する
-test("tokenizer error: invalid json in logic arg fails", () => {
+// 関数引数内の不正なJSON値は失敗することを確認する
+test("tokenizer error: invalid json in function arg fails", () => {
   expectTokenizerErrorWithPosition("<A v=func(tru) />")
 })

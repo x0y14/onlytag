@@ -104,9 +104,9 @@ test("parser error: invalid json token payload fails in parse stage", () => {
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
-// allowLogic: false のパーサーに IDENT トークンが属性値位置に来た場合は失敗することを確認する
-test("parser error: ident in attribute value position with allowLogic false fails", () => {
-  const otNoLogic = new onlytag({ allowLogic: false })
+// allowFunction: false のパーサーに IDENT トークンが属性値位置に来た場合は失敗することを確認する
+test("parser error: ident in attribute value position with allowFunction false fails", () => {
+  const otNoFunction = new onlytag({ allowFunction: false })
   const tokens: Token[] = [
     { kind: "LT", value: "<", position: 0 },
     { kind: "IDENT", value: "A", position: 1 },
@@ -121,7 +121,7 @@ test("parser error: ident in attribute value position with allowLogic false fail
 
   let error: unknown
   try {
-    otNoLogic.parse(tokens)
+    otNoFunction.parse(tokens)
   } catch (caught) {
     error = caught
   }
@@ -131,7 +131,7 @@ test("parser error: ident in attribute value position with allowLogic false fail
   }
 
   assert.instanceOf(error, Error)
-  assert.match((error as Error).message, /logic is not allowed/i)
+  assert.match((error as Error).message, /function is not allowed/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 

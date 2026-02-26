@@ -12,44 +12,44 @@ export const DecorationSchema = z.object({
 /** デコレーションの型。英数字・ハイフン・アンダースコアからなる名前を持つ */
 export type Decoration = z.infer<typeof DecorationSchema>
 
-/** インジェクトノード（$variable）のZodスキーマ */
-export const InjectNodeSchema = z.object({
-  type: z.literal("inject"),
+/** 変数ノード（$variable）のZodスキーマ */
+export const VariableNodeSchema = z.object({
+  type: z.literal("variable"),
   name: z.string().regex(/^[A-Za-z][A-Za-z0-9-]*$/),
 })
-/** インジェクトノードの型。$variable 参照を表す */
-export type InjectNode = z.infer<typeof InjectNodeSchema>
+/** 変数ノードの型。$variable 参照を表す */
+export type VariableNode = z.infer<typeof VariableNodeSchema>
 
-/** ロジックノードの型。funcname(args) 関数呼び出しを表す */
-export type LogicNode = {
-  type: "logic"
+/** 関数ノードの型。funcname(args) 関数呼び出しを表す */
+export type FunctionNode = {
+  type: "function"
   name: string
-  args: LogicArg[]
+  args: FunctionArg[]
 }
 
-/** ロジック引数の型。JSON値・インジェクト・ネストしたロジックのいずれか */
-export type LogicArg = JsonValue | InjectNode | LogicNode
+/** 関数引数の型。JSON値・変数・ネストした関数のいずれか */
+export type FunctionArg = JsonValue | VariableNode | FunctionNode
 
-/** ロジック引数のZodスキーマ（再帰参照のためlazy） */
-export const LogicArgSchema: z.ZodType<LogicArg> = z.lazy(() =>
-  z.union([InjectNodeSchema, LogicNodeSchema, JsonValueSchema]),
+/** 関数引数のZodスキーマ（再帰参照のためlazy） */
+export const FunctionArgSchema: z.ZodType<FunctionArg> = z.lazy(() =>
+  z.union([VariableNodeSchema, FunctionNodeSchema, JsonValueSchema]),
 )
 
-/** ロジックノードの再帰的なZodスキーマ */
-export const LogicNodeSchema: z.ZodType<LogicNode> = z.lazy(() =>
+/** 関数ノードの再帰的なZodスキーマ */
+export const FunctionNodeSchema: z.ZodType<FunctionNode> = z.lazy(() =>
   z.object({
-    type: z.literal("logic"),
+    type: z.literal("function"),
     name: z.string().regex(/^[A-Za-z][A-Za-z0-9-]*$/),
-    args: z.array(LogicArgSchema),
+    args: z.array(FunctionArgSchema),
   }),
 )
 
-/** 属性値の型。JSON値・インジェクト・ロジックのいずれか */
-export type AttributeValue = JsonValue | InjectNode | LogicNode
+/** 属性値の型。JSON値・変数・関数のいずれか */
+export type AttributeValue = JsonValue | VariableNode | FunctionNode
 
 /** 属性値のZodスキーマ */
 export const AttributeValueSchema: z.ZodType<AttributeValue> = z.lazy(() =>
-  z.union([InjectNodeSchema, LogicNodeSchema, JsonValueSchema]),
+  z.union([VariableNodeSchema, FunctionNodeSchema, JsonValueSchema]),
 )
 
 /** 要素ノードの型。タグ名・デコレーション・属性・子要素を持つ */

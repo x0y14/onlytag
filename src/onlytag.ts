@@ -1,5 +1,5 @@
 import type { Token, TokenKind } from "./token.js"
-import type { DocumentNode, ElementNode, Decoration, JsonValue, AttributeValue, InjectNode, LogicNode, LogicArg } from "./ast.js"
+import type { DocumentNode, ElementNode, Decoration, JsonValue, AttributeValue, VariableNode, FunctionNode, FunctionArg } from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions } from "./types.js"
 import { normalizeOptions } from "./types.js"
@@ -218,16 +218,16 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
 
   /**
    * 値読み取り位置（EQUALS の直後、またはロジック引数内の LPAREN/COMMA の直後）で
-   * inject・ロジック関数名・JSON値のいずれかを読み取る。
-   * inject または JSON値を読み取った場合は true を返す。
-   * ロジック関数名（ident の直後が ( ）の場合はトークンを emit せずに false を返し、
+   * variable・関数名・JSON値のいずれかを読み取る。
+   * variable または JSON値を読み取った場合は true を返す。
+   * 関数名（ident の直後が ( ）の場合はトークンを emit せずに false を返し、
    * 呼び出し元がメインループに戻って IDENT を読み取るよう委ねる。
    */
   function tryReadValue(inLogic: boolean): boolean {
-    // inject: $ident
+    // variable: $ident
     if (pos < len && input[pos] === "$") {
-      if (!options.allowInject) {
-        tokenError(`inject is not allowed: found inject at position`, pos)
+      if (!options.allowVariable) {
+        tokenError(`variable is not allowed: found variable at position`, pos)
       }
       const start = pos
       pos++
@@ -235,24 +235,24 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
       while (pos < len && isIdentChar(input[pos])) pos++
       if (pos === identStart) {
         tokenError(
-          `invalid inject token: expected=<$[A-Za-z][A-Za-z0-9-]*>, actual=<$${pos < len ? input[pos] : "<eof>"}>`,
+          `invalid variable token: expected=<$[A-Za-z][A-Za-z0-9-]*>, actual=<$${pos < len ? input[pos] : "<eof>"}>`,
           start,
         )
       }
-      emit("INJECT", input.slice(start, pos), start)
+      emit("VARIABLE", input.slice(start, pos), start)
       return true
     }
 
-    // ident が ( に続く場合はロジック関数名 → emit せずに false を返す
+    // ident が ( に続く場合は関数名 → emit せずに false を返す
     if (pos < len && isIdentChar(input[pos])) {
       let tp = pos
       while (tp < len && isIdentChar(input[tp])) tp++
       let ws = tp
       while (ws < len && isWhitespace(input[ws])) ws++
       if (ws < len && input[ws] === "(") {
-        // ロジック関数名: メインループに処理を委ねる
-        if (!options.allowLogic) {
-          tokenError(`logic is not allowed: found logic at position`, pos)
+        // 関数名: メインループに処理を委ねる
+        if (!options.allowFunction) {
+          tokenError(`function is not allowed: found function at position`, pos)
         }
         expectLPAREN = true
         return false
@@ -278,18 +278,18 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は属性値として読む（inject / ロジック / JSON）
+    // EQUALS の直後は属性値として読む（variable / 関数 / JSON）
     if (lastKind === "EQUALS") {
       if (tryReadValue(false)) continue
-      // tryReadValue が false を返した場合はロジック関数名の IDENT を読む（フォールスルー）
+      // tryReadValue が false を返した場合は関数名の IDENT を読む（フォールスルー）
     }
 
-    // ロジック引数内の LPAREN/COMMA の直後は引数値として読む
+    // 関数引数内の LPAREN/COMMA の直後は引数値として読む
     if ((lastKind === "LPAREN" || lastKind === "COMMA") && logicDepth > 0) {
       // ) が来た場合は空引数リストまたは引数終了 → メインループに委ねる
       if (pos < len && input[pos] !== ")") {
         if (tryReadValue(true)) continue
-        // ロジック関数名の場合はフォールスルー
+        // 関数名の場合はフォールスルー
       }
     }
 
@@ -455,38 +455,38 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
   /**
    * 属性値トークンを読んでASTノードに変換する。
-   * JSON値・インジェクト（$variable）・ロジック（funcname(args)）を処理する
+   * JSON値・変数（$variable）・関数（funcname(args)）を処理する
    */
   function parseAttributeValue(): AttributeValue {
     const tok = peek()
 
-    // インジェクト: $variable
-    if (tok.kind === "INJECT") {
-      if (!options.allowInject) {
-        parseError(`inject is not allowed: found inject "${tok.value}"`, tok.position)
+    // 変数: $variable
+    if (tok.kind === "VARIABLE") {
+      if (!options.allowVariable) {
+        parseError(`variable is not allowed: found variable "${tok.value}"`, tok.position)
       }
       advance()
-      const injectNode: InjectNode = { type: "inject", name: tok.value.slice(1) }
-      return injectNode
+      const variableNode: VariableNode = { type: "variable", name: tok.value.slice(1) }
+      return variableNode
     }
 
-    // ロジック: funcname(arg1, arg2, ...)
+    // 関数: funcname(arg1, arg2, ...)
     if (tok.kind === "IDENT") {
-      if (!options.allowLogic) {
-        parseError(`logic is not allowed: found logic "${tok.value}"`, tok.position)
+      if (!options.allowFunction) {
+        parseError(`function is not allowed: found function "${tok.value}"`, tok.position)
       }
       const funcName = advance().value
       expect("LPAREN")
-      const args: LogicArg[] = []
+      const args: FunctionArg[] = []
       while (peek().kind !== "RPAREN") {
         if (args.length > 0) {
           expect("COMMA")
         }
-        args.push(parseAttributeValue() as LogicArg)
+        args.push(parseAttributeValue() as FunctionArg)
       }
       expect("RPAREN")
-      const logicNode: LogicNode = { type: "logic", name: funcName, args }
-      return logicNode
+      const functionNode: FunctionNode = { type: "function", name: funcName, args }
+      return functionNode
     }
 
     // JSON値

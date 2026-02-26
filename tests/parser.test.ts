@@ -237,47 +237,47 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
 
-// inject属性を InjectNode としてパースできることを確認する
-test("parser: parses inject attribute value", () => {
+// variable属性を VariableNode としてパースできることを確認する
+test("parser: parses variable attribute value", () => {
   const doc = ot.parse(ot.tokenize("<A mode=$dark />"))
   const attr = doc.children[0].attributes["mode"]
-  assert.deepStrictEqual(attr, { type: "inject", name: "dark" })
+  assert.deepStrictEqual(attr, { type: "variable", name: "dark" })
 })
 
-// ロジック属性を LogicNode としてパースできることを確認する
-test("parser: parses logic attribute value", () => {
+// 関数属性を FunctionNode としてパースできることを確認する
+test("parser: parses function attribute value", () => {
   const doc = ot.parse(ot.tokenize('<A cond=equal($mode,"dark") />'))
   const attr = doc.children[0].attributes["cond"]
   assert.deepStrictEqual(attr, {
-    type: "logic",
+    type: "function",
     name: "equal",
-    args: [{ type: "inject", name: "mode" }, "dark"],
+    args: [{ type: "variable", name: "mode" }, "dark"],
   })
 })
 
-// 複数引数のロジックを正しい LogicNode としてパースできることを確認する
-test("parser: parses logic with multiple json args", () => {
+// 複数引数の関数を正しい FunctionNode としてパースできることを確認する
+test("parser: parses function with multiple json args", () => {
   const doc = ot.parse(ot.tokenize("<A v=add(1,2) />"))
   const attr = doc.children[0].attributes["v"]
-  assert.deepStrictEqual(attr, { type: "logic", name: "add", args: [1, 2] })
+  assert.deepStrictEqual(attr, { type: "function", name: "add", args: [1, 2] })
 })
 
-// 空引数リストのロジックをパースできることを確認する
-test("parser: parses logic with empty args", () => {
+// 空引数リストの関数をパースできることを確認する
+test("parser: parses function with empty args", () => {
   const doc = ot.parse(ot.tokenize("<A v=now() />"))
   const attr = doc.children[0].attributes["v"]
-  assert.deepStrictEqual(attr, { type: "logic", name: "now", args: [] })
+  assert.deepStrictEqual(attr, { type: "function", name: "now", args: [] })
 })
 
-// ネストしたロジックを正しい LogicNode としてパースできることを確認する
-test("parser: parses nested logic", () => {
+// ネストした関数を正しい FunctionNode としてパースできることを確認する
+test("parser: parses nested function", () => {
   const doc = ot.parse(ot.tokenize('<A v=outer(inner($x,"y"),1) />'))
   const attr = doc.children[0].attributes["v"]
   assert.deepStrictEqual(attr, {
-    type: "logic",
+    type: "function",
     name: "outer",
     args: [
-      { type: "logic", name: "inner", args: [{ type: "inject", name: "x" }, "y"] },
+      { type: "function", name: "inner", args: [{ type: "variable", name: "x" }, "y"] },
       1,
     ],
   })

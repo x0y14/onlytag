@@ -5,10 +5,10 @@ import { type NormalizedOptions } from "../src/types.js"
  */
 export function getAllNormalizedOptions(): NormalizedOptions[] {
   return [
-    { allowDecorations: true, allowAttributes: true, allowInject: true, allowLogic: true },
-    { allowDecorations: true, allowAttributes: false, allowInject: true, allowLogic: true },
-    { allowDecorations: false, allowAttributes: true, allowInject: true, allowLogic: true },
-    { allowDecorations: false, allowAttributes: false, allowInject: true, allowLogic: true },
+    { allowDecorations: true, allowAttributes: true, allowVariable: true, allowFunction: true },
+    { allowDecorations: true, allowAttributes: false, allowVariable: true, allowFunction: true },
+    { allowDecorations: false, allowAttributes: true, allowVariable: true, allowFunction: true },
+    { allowDecorations: false, allowAttributes: false, allowVariable: true, allowFunction: true },
   ]
 }
 
