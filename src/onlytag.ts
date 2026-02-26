@@ -139,7 +139,7 @@ function readJsonValue(input: string, pos: number, closing: string): [value: str
   }
 
   if (isJsonBoundary(input, pos, closing)) {
-    const actual = input[pos] === "/" ? "/>" : input[pos]
+    const actual = input[pos] === "/" ? "/" + closing : input[pos]
     tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos)
   }
 
@@ -525,7 +525,14 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
     // 自己閉じ
     if (peek().kind === "SLASH_GT") {
-      advance()
+      const slashGtToken = advance()
+      if (openPairIndex !== undefined && slashGtToken.pairIndex !== undefined
+        && openPairIndex !== slashGtToken.pairIndex) {
+        parseError(
+          `mismatched delimiter pair for <${tagName}/>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${slashGtToken.pairIndex}>`,
+          slashGtToken.position,
+        )
+      }
       return {
         type: "element",
         tagName,

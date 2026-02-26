@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 /** デリミタとして許可される文字の集合 */
-export const ALLOWED_DELIMITER_CHARS = new Set([
+export const ALLOWED_DELIMITER_CHARS: ReadonlySet<string> = new Set([
   "!", "#", "%", "&", "(", ")", "*", "+", ";", "<", ">", "?", "@", "^", "|", "~",
 ])
 
@@ -133,6 +133,6 @@ export function normalizeOptions(options?: Options): NormalizedOptions {
     allowDecorations: options?.allowDecorations ?? true,
     allowAttributes: options?.allowAttributes ?? true,
     allowPlaceholders: options?.allowPlaceholders ?? true,
-    tags,
+    tags: [...tags],
   }
 }

@@ -154,6 +154,24 @@ test("tokenizer error: custom delimiter missing attribute value fails", () => {
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
+// カスタムデリミタで readJsonValue のエラーメッセージに正しい閉じデリミタが含まれることを確認する
+test("tokenizer error: custom delimiter readJsonValue error contains correct closing delimiter", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  let error: unknown
+  try {
+    otPipe.tokenize("|A level= /|")
+  } catch (caught) {
+    error = caught
+  }
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  const message = (error as Error).message
+  assert.include(message, "/|")
+  assert.notInclude(message, "/>")
+})
+
 // カスタムデリミタで不正文字はエラーになることを確認する
 test("tokenizer error: custom delimiter invalid character fails", () => {
   const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })

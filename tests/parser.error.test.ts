@@ -200,6 +200,37 @@ test("parser error: cross-delimiter mismatch fails", () => {
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
+// 自己閉じタグで LT と SLASH_GT の pairIndex が異なる場合にエラーになることを確認する
+test("parser error: self-closing tag cross-delimiter mismatch fails", () => {
+  const otMulti = new onlytag({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "(", closing: ")" },
+    ],
+  })
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0, pairIndex: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "SLASH_GT", value: "/)", position: 2, pairIndex: 1 },
+    { kind: "EOF", value: "", position: 4 },
+  ]
+
+  let error: unknown
+  try {
+    otMulti.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /mismatched delimiter pair/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
 // 不正なJSON_VALUEトークンを含む場合にparse段で失敗することを確認する
 test("parser error: invalid json token payload fails in parse stage", () => {
   const tokens: Token[] = [
