@@ -177,10 +177,10 @@ test("parser: returns empty document for empty input", () => {
 
 // タグ名・属性名・デコレーション名の許可文字を受理することを確認する
 test("parser: accepts allowed identifier characters", () => {
-  const doc = ot.parse(ot.tokenize('<A_1-b .d_2-e k_3-f={"x":1} />'))
+  const doc = ot.parse(ot.tokenize('<A1-b .d_2-e k_3-f={"x":1} />'))
   assert.equal(doc.children.length, 1)
   const node = doc.children[0]
-  assert.equal(node.tagName, "A_1-b")
+  assert.equal(node.tagName, "A1-b")
   assert.equal(node.decorations[0].name, "d_2-e")
   assert.deepStrictEqual(node.attributes["k_3-f"], { x: 1 })
 })

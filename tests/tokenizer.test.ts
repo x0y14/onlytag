@@ -156,6 +156,13 @@ test("tokenizer: detects json boundary before next attribute", () => {
   assert.deepStrictEqual(values, ['{"k":1}', "2"])
 })
 
+// '<'と'/'の間の空白を許可することを確認する
+test("tokenizer: allows whitespace between < and / in closing tag", () => {
+  const tokens = ot.tokenize("<A>< /A>")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "GT", "LT_SLASH", "IDENT", "GT", "EOF"])
+})
+
 // JSON属性の終端を/>境界で正しく判定できることを確認する
 test("tokenizer: detects json boundary before slash-gt", () => {
   const tokens = ot.tokenize('<A config={"k":1}/>')

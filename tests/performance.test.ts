@@ -4,7 +4,7 @@ import { onlytag } from "../src/onlytag.js"
 const ot = new onlytag()
 
 function buildFlatDocument(size: number): string {
-  return Array.from({ length: size }, (_, i) => `<Node_${i} value=${i} />`).join("")
+  return Array.from({ length: size }, (_, i) => `<Node${i} value=${i} />`).join("")
 }
 
 function measureMs(fn: () => void, repeat = 5): number {
