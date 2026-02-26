@@ -20,8 +20,19 @@ export const PlaceholderSchema = z.object({
 /** placeholder の型。$name 形式で指定される属性値代替 */
 export type Placeholder = z.infer<typeof PlaceholderSchema>
 
+/**
+ * JSON値のうち、`type: "placeholder"` を持つオブジェクトを除外したスキーマ。
+ * そのようなオブジェクトは PlaceholderSchema によってのみ受理される。
+ */
+const JsonNonPlaceholderValueSchema = JsonValueSchema.refine(
+  (value) => !(value && typeof value === "object" && (value as any).type === "placeholder"),
+  {
+    message: 'Objects with type "placeholder" must satisfy PlaceholderSchema',
+  },
+)
+
 /** 属性値のZodスキーマ。placeholder または JSON 値 */
-export const AttributeValueSchema = z.union([PlaceholderSchema, JsonValueSchema])
+export const AttributeValueSchema = z.union([PlaceholderSchema, JsonNonPlaceholderValueSchema])
 /** 属性値の型。JSON 値または placeholder */
 export type AttributeValue = Placeholder | JsonValue
 
