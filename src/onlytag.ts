@@ -397,7 +397,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
               phToken.position,
             )
           }
-          if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+          if (!/^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)) {
             parseError(
               `invalid placeholder: name "${name}" contains invalid characters`,
               phToken.position,
