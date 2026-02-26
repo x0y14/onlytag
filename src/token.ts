@@ -21,6 +21,7 @@ export const TokenSchema = z.object({
   kind: TokenKind,
   value: z.string(),
   position: z.number().int().nonnegative(),
+  pairIndex: z.number().int().nonnegative().optional(),
 })
 /** トークンの型。種別・値・入力文字列中の位置を持つ */
 export type Token = z.infer<typeof TokenSchema>

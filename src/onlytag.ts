@@ -242,20 +242,18 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
   // 状態マシン用
   let insideTag = false
   let currentClosing: string | null = null
+  let currentPairIndex: number | null = null
 
   // ルックアップ構造
   const openingLookup = buildOpeningLookup(options.tags)
   const allDelimiterChars = buildAllDelimiterChars(options.tags)
 
-  // closing 文字から、それが opening でもあるペアの closing を引くマップ
-  // （opening === closing のケースでタグ内の閉じ判定に使う）
-  const closingToClosingLookup = new Map<string, string>()
-  for (const pair of options.tags) {
-    closingToClosingLookup.set(pair.closing, pair.closing)
-  }
-
-  function emit(kind: TokenKind, value: string, position: number) {
-    tokens.push({ kind, value, position })
+  function emit(kind: TokenKind, value: string, position: number, pairIndex?: number) {
+    const token: Token = { kind, value, position }
+    if (pairIndex !== undefined) {
+      token.pairIndex = pairIndex
+    }
+    tokens.push(token)
     lastKind = kind
   }
 
@@ -295,19 +293,21 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
 
       if (ch === closing) {
         // 閉じデリミタ → GT
-        emit("GT", closing, start)
+        emit("GT", closing, start, currentPairIndex!)
         pos += 1
         insideTag = false
         currentClosing = null
+        currentPairIndex = null
         continue
       }
 
       if (ch === "/" && pos + 1 < len && input[pos + 1] === closing) {
         // /closing → SLASH_GT
-        emit("SLASH_GT", "/" + closing, start)
+        emit("SLASH_GT", "/" + closing, start, currentPairIndex!)
         pos += 2
         insideTag = false
         currentClosing = null
+        currentPairIndex = null
         continue
       }
 
@@ -363,35 +363,21 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
       if (entry) {
         const closing = entry.closing
 
-        if (ch === closing) {
-          // opening === closing のケース（例: |/|）
-          // 次の非空白文字が "/" なら LT_SLASH
-          let lookAhead = pos + 1
-          while (lookAhead < len && isWhitespace(input[lookAhead])) lookAhead++
+        // 次の非空白文字が "/" なら LT_SLASH、そうでなければ LT
+        let lookAhead = pos + 1
+        while (lookAhead < len && isWhitespace(input[lookAhead])) lookAhead++
 
-          if (lookAhead < len && input[lookAhead] === "/") {
-            emit("LT_SLASH", ch + "/", start)
-            pos = lookAhead + 1
-          } else {
-            emit("LT", ch, start)
-            pos += 1
-          }
+        if (lookAhead < len && input[lookAhead] === "/") {
+          emit("LT_SLASH", ch + "/", start, entry.pairIndex)
+          pos = lookAhead + 1
         } else {
-          // opening !== closing の通常ケース
-          let lookAhead = pos + 1
-          while (lookAhead < len && isWhitespace(input[lookAhead])) lookAhead++
-
-          if (lookAhead < len && input[lookAhead] === "/") {
-            emit("LT_SLASH", ch + "/", start)
-            pos = lookAhead + 1
-          } else {
-            emit("LT", ch, start)
-            pos += 1
-          }
+          emit("LT", ch, start, entry.pairIndex)
+          pos += 1
         }
 
         insideTag = true
         currentClosing = closing
+        currentPairIndex = entry.pairIndex
         continue
       }
 
@@ -460,7 +446,8 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   }
 
   function parseElement(): ElementNode {
-    expect("LT")
+    const openLtToken = expect("LT")
+    const openPairIndex = openLtToken.pairIndex
     const tagToken = expect("IDENT")
     const tagName = tagToken.value
     if (!isValidTagName(tagName)) {
@@ -562,7 +549,8 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       parseError(`missing closing tag: expected=</${tagName}>, actual=<eof>`, peek().position)
     }
 
-    expect("LT_SLASH")
+    const closeLtSlashToken = expect("LT_SLASH")
+    const closePairIndex = closeLtSlashToken.pairIndex
     const closeTag = expect("IDENT")
     if (!isValidTagName(closeTag.value)) {
       parseError(
@@ -574,6 +562,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       parseError(
         `mismatched closing tag: expected=</${tagName}>, actual=</${closeTag.value}>`,
         closeTag.position,
+      )
+    }
+    if (openPairIndex !== undefined && closePairIndex !== undefined && openPairIndex !== closePairIndex) {
+      parseError(
+        `mismatched delimiter pair for <${tagName}>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${closePairIndex}>`,
+        closeLtSlashToken.position,
       )
     }
     expect("GT")

@@ -341,6 +341,58 @@ test("tokenizer: custom delimiter json boundary detection", () => {
   assert.equal(jsonToken!.value, '{"k":1}')
 })
 
+// --- pairIndex ---
+
+// デリミタトークン（LT, LT_SLASH, GT, SLASH_GT）に pairIndex が付与されることを確認する
+test("tokenizer: delimiter tokens have pairIndex", () => {
+  const otMulti = new onlytag({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "(", closing: ")" },
+    ],
+  })
+  const tokens = otMulti.tokenize("<A />(B /)")
+
+  const ltAngle = tokens.find((t) => t.kind === "LT" && t.value === "<")!
+  assert.equal(ltAngle.pairIndex, 0)
+  const slashGtAngle = tokens.find((t) => t.kind === "SLASH_GT" && t.value === "/>")!
+  assert.equal(slashGtAngle.pairIndex, 0)
+
+  const ltParen = tokens.find((t) => t.kind === "LT" && t.value === "(")!
+  assert.equal(ltParen.pairIndex, 1)
+  const slashGtParen = tokens.find((t) => t.kind === "SLASH_GT" && t.value === "/)")!
+  assert.equal(slashGtParen.pairIndex, 1)
+})
+
+// 非デリミタトークン（IDENT, DOT_IDENT, EQUALS, JSON_VALUE, PLACEHOLDER, EOF）に pairIndex が付与されないことを確認する
+test("tokenizer: non-delimiter tokens do not have pairIndex", () => {
+  const tokens = ot.tokenize('<A .d attr="v" />')
+  const nonDelimiterTokens = tokens.filter(
+    (t) => !["LT", "LT_SLASH", "GT", "SLASH_GT"].includes(t.kind),
+  )
+  for (const token of nonDelimiterTokens) {
+    assert.isUndefined(token.pairIndex)
+  }
+})
+
+// 開閉タグの GT に pairIndex が付与されることを確認する
+test("tokenizer: GT tokens have pairIndex", () => {
+  const otMulti = new onlytag({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "(", closing: ")" },
+    ],
+  })
+  const tokens = otMulti.tokenize("<A>(B /)</A>")
+
+  const gtTokens = tokens.filter((t) => t.kind === "GT")
+  assert.equal(gtTokens[0].pairIndex, 0) // <A> の >
+  assert.equal(gtTokens[1].pairIndex, 0) // </A> の >
+
+  const ltSlash = tokens.find((t) => t.kind === "LT_SLASH")!
+  assert.equal(ltSlash.pairIndex, 0)
+})
+
 // カスタムデリミタで < と > が通常文字扱いになりエラーとなることを確認する
 test("tokenizer: angle brackets are invalid with custom-only delimiter", () => {
   const otCustom = new onlytag({ tags: [{ opening: "|", closing: "|" }] })

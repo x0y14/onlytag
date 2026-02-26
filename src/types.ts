@@ -96,7 +96,7 @@ function validateTags(tags: TagDelimiterPair[]): void {
     // 一意性チェック: 同一ペア内で opening === closing は許可
     // 異なるペア間での文字重複は禁止
     const openingExisting = seen.get(pair.opening)
-    if (openingExisting !== undefined && openingExisting !== pairIndex) {
+    if (openingExisting !== undefined) {
       throw new Error(
         `duplicate delimiter character "${pair.opening}" in tags[${pairIndex}].opening (already used in tags[${openingExisting}])`,
       )
@@ -109,7 +109,7 @@ function validateTags(tags: TagDelimiterPair[]): void {
       seen.set(pair.opening, pairIndex)
 
       const closingExisting = seen.get(pair.closing)
-      if (closingExisting !== undefined && closingExisting !== pairIndex) {
+      if (closingExisting !== undefined) {
         throw new Error(
           `duplicate delimiter character "${pair.closing}" in tags[${pairIndex}].closing (already used in tags[${closingExisting}])`,
         )
