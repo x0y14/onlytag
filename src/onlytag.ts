@@ -1,9 +1,25 @@
 import type { Token, TokenKind } from "./token.js"
-import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js"
+import type {
+  DocumentNode,
+  ElementNode,
+  Decoration,
+  JsonValue,
+  Placeholder,
+  AttributeValue,
+} from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
+
+/** タグ名のバリデーションパターン */
+const TAG_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+/** プレースホルダー先頭文字のバリデーションパターン */
+const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
+/** プレースホルダー後続文字のバリデーションパターン */
+const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9-]/
+/** プレースホルダー名のバリデーションパターン */
+const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
 
 // --- tokenize 内部ヘルパー ---
 
@@ -38,7 +54,7 @@ function isIdentChar(ch: string): boolean {
  * @returns 有効なタグ名であればtrue
  */
 function isValidTagName(name: string): boolean {
-  return /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)
+  return TAG_NAME_PATTERN.test(name)
 }
 
 /**
@@ -145,6 +161,29 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
   )
 }
 
+/**
+ * 入力文字列から placeholder を読み取る。$[a-zA-Z][a-zA-Z0-9-]* の形式
+ * @param input - 入力文字列全体
+ * @param pos - 読み取り開始位置（$ の位置）
+ * @returns ドル記号を含む placeholder 文字列と読み取り後の位置のタプル
+ * @throws {Error} $ の後が英字でない、または $ のみの場合
+ */
+function readPlaceholder(input: string, pos: number): [value: string, newPos: number] {
+  const len = input.length
+  // pos は $ の位置
+  const start = pos
+  pos++ // $ をスキップ
+
+  if (pos >= len || !PLACEHOLDER_FIRST_CHAR_PATTERN.test(input[pos])) {
+    const actual = pos < len ? input[pos] : "<eof>"
+    tokenError(`invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9-]*>, actual=<$${actual}>`, start)
+  }
+
+  while (pos < len && PLACEHOLDER_CHAR_PATTERN.test(input[pos])) pos++
+
+  return [input.slice(start, pos), pos]
+}
+
 // --- tokenize 本体 ---
 
 /**
@@ -169,12 +208,24 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は JSON 値として読む
+    // EQUALS の直後は JSON 値または placeholder として読む
     if (lastKind === "EQUALS") {
+      // 属性値前の空白を読み飛ばす
+      while (pos < len && isWhitespace(input[pos])) pos++
+
       const start = pos
-      const [value, newPos] = readJsonValue(input, pos)
-      emit("JSON_VALUE", value, start)
-      pos = newPos
+      if (pos < len && input[pos] === "$") {
+        if (!options.allowPlaceholders) {
+          tokenError(`placeholders are not allowed: found placeholder at position`, start)
+        }
+        const [value, newPos] = readPlaceholder(input, pos)
+        emit("PLACEHOLDER", value, start)
+        pos = newPos
+      } else {
+        const [value, newPos] = readJsonValue(input, pos)
+        emit("JSON_VALUE", value, start)
+        pos = newPos
+      }
       continue
     }
 
@@ -315,7 +366,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
     // デコレーションと属性
     const decorations: Decoration[] = []
-    const attributes: Record<string, JsonValue> = {}
+    const attributes: Record<string, AttributeValue> = {}
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
@@ -332,17 +383,50 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
-        const jsonToken = expect("JSON_VALUE")
-        const parsed = decodeJsonString(jsonToken.value)
-        if (!parsed.success) {
-          const detail = parsed.error.issues[0]!.message
-          parseError(
-            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
-            jsonToken.position,
-          )
+        if (peek().kind === "PLACEHOLDER") {
+          if (!options.allowPlaceholders) {
+            parseError(
+              `placeholders are not allowed: found placeholder "${peek().value}"`,
+              peek().position,
+            )
+          }
+          const phToken = advance()
+          const raw = phToken.value
+          // validate placeholder token format: must start with "$" and have a valid name
+          if (!raw.startsWith("$")) {
+            parseError(
+              `invalid placeholder: expected to start with "$", actual="${raw}"`,
+              phToken.position,
+            )
+          }
+          const name = raw.slice(1)
+          if (name.length === 0) {
+            parseError(
+              `invalid placeholder: name is empty in "${raw}"`,
+              phToken.position,
+            )
+          }
+          if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
+            parseError(
+              `invalid placeholder: name "${name}" contains invalid characters`,
+              phToken.position,
+            )
+          }
+          const placeholder: Placeholder = { type: "placeholder", name }
+          attributes[attrName] = placeholder
+        } else {
+          const jsonToken = expect("JSON_VALUE")
+          const parsed = decodeJsonString(jsonToken.value)
+          if (!parsed.success) {
+            const detail = parsed.error.issues[0]!.message
+            parseError(
+              `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+              jsonToken.position,
+            )
+          }
+          encodeJsonValue(parsed.data as JsonValue)
+          attributes[attrName] = parsed.data as JsonValue
         }
-        encodeJsonValue(parsed.data as JsonValue)
-        attributes[attrName] = parsed.data as JsonValue
       }
     }
 

@@ -169,3 +169,46 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   const value = tokens.find((t) => t.kind === "JSON_VALUE")
   assert.equal(value!.value, '{"k":1}')
 })
+
+// placeholder トークンが PLACEHOLDER として取得できることを確認する
+test("tokenizer: placeholder attribute value", () => {
+  const tokens = ot.tokenize("<A attr=$myPlaceholder />")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "PLACEHOLDER",
+    "SLASH_GT",
+    "EOF",
+  ])
+  const ph = tokens.find((t) => t.kind === "PLACEHOLDER")
+  assert.equal(ph!.value, "$myPlaceholder")
+})
+
+// placeholder 名はドル記号を含む生文字列であることを確認する
+test("tokenizer: placeholder value includes dollar sign", () => {
+  const tokens = ot.tokenize("<A x=$abc-123 />")
+  const ph = tokens.find((t) => t.kind === "PLACEHOLDER")
+  assert.equal(ph!.value, "$abc-123")
+})
+
+// JSON 値と placeholder が混在しても正しくトークナイズできることを確認する
+test("tokenizer: mixed json and placeholder attributes", () => {
+  const tokens = ot.tokenize("<A .deco json={} ph=$abc />")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "DOT_IDENT",
+    "IDENT",
+    "EQUALS",
+    "JSON_VALUE",
+    "IDENT",
+    "EQUALS",
+    "PLACEHOLDER",
+    "SLASH_GT",
+    "EOF",
+  ])
+})

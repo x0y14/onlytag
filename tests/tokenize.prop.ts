@@ -125,3 +125,18 @@ test("tokenize property: invalid attributes are rejected", () => {
     { numRuns: 200 },
   )
 })
+
+// 有効な placeholder 属性を含むタグは PLACEHOLDER トークンを生成することを確認する
+test("tokenize property: valid placeholder attribute produces PLACEHOLDER token", () => {
+  const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+  fc.assert(
+    fc.property(identArb, identArb, placeholderNameArb, (tag, attrName, phName) => {
+      const input = `<${tag} ${attrName}=$${phName} />`
+      const tokens = ot.tokenize(input)
+      const ph = tokens.find((t) => t.kind === "PLACEHOLDER")
+      assert.isDefined(ph)
+      assert.equal(ph!.value, `$${phName}`)
+    }),
+    { numRuns: 200 },
+  )
+})

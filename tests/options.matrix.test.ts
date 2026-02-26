@@ -24,17 +24,21 @@ const representatives: Record<InputCategory, { label: string; input: string }[]>
     { label: "decoration + 属性", input: '<Badge .primary label="new" />' },
     { label: "交互配置", input: "<Widget .d1 count=1 .d2 enabled=true />" },
   ],
+  E: [
+    { label: "placeholder 属性", input: "<A attr=$myValue />" },
+    { label: "placeholder + JSON 属性", input: '<A ph=$abc json="x" />' },
+  ],
 }
 
 /**
  * モードのラベルを生成する
  */
 function modeLabel(options: NormalizedOptions): string {
-  return `deco=${options.allowDecorations},attr=${options.allowAttributes}`
+  return `deco=${options.allowDecorations},attr=${options.allowAttributes},ph=${options.allowPlaceholders}`
 }
 
 for (const options of getAllNormalizedOptions()) {
-  for (const category of ["A", "B", "C", "D"] as InputCategory[]) {
+  for (const category of ["A", "B", "C", "D", "E"] as InputCategory[]) {
     for (const { label, input } of representatives[category]) {
       const expectPass = shouldPass(category, options)
       const verb = expectPass ? "成功する" : "拒否する"
@@ -122,4 +126,18 @@ test("parse guard: allowAttributes=false で属性トークンを渡すとエラ
     { kind: "EOF", value: "", position: 14 },
   ]
   assert.throws(() => ot.parse(tokens), /attributes are not allowed/)
+})
+
+test("parse guard: allowPlaceholders=false で PLACEHOLDER トークンを渡すとエラー", () => {
+  const ot = new onlytag({ allowPlaceholders: false })
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "tag", position: 1 },
+    { kind: "IDENT", value: "attr", position: 5 },
+    { kind: "EQUALS", value: "=", position: 9 },
+    { kind: "PLACEHOLDER", value: "$abc", position: 10 },
+    { kind: "SLASH_GT", value: "/>", position: 14 },
+    { kind: "EOF", value: "", position: 16 },
+  ]
+  assert.throws(() => ot.parse(tokens), /placeholders are not allowed/)
 })

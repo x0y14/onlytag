@@ -6,6 +6,7 @@ import { onlytag } from "../src/onlytag.js"
 const optionsArb = fc.record({
   allowDecorations: fc.boolean(),
   allowAttributes: fc.boolean(),
+  allowPlaceholders: fc.boolean(),
 })
 
 /** 有効な識別子 */
@@ -22,6 +23,14 @@ const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
 
 /** attribute 文字列 */
 const attributeArb = fc.tuple(identArb, jsonLiteralArb).map(([key, value]) => `${key}=${value}`)
+
+/** placeholder 名 */
+const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+
+/** placeholder 属性文字列 */
+const placeholderAttributeArb = fc
+  .tuple(identArb, placeholderNameArb)
+  .map(([key, name]) => `${key}=$${name}`)
 
 /** カテゴリ A: タグのみ */
 const tagOnlyInputArb = tagNameArb.map((tag) => `<${tag} />`)
@@ -44,6 +53,11 @@ const bothInputArb = fc
     fc.array(attributeArb, { minLength: 1, maxLength: 2 }),
   )
   .map(([tag, decos, attrs]) => `<${tag} ${decos.join(" ")} ${attrs.join(" ")} />`)
+
+/** カテゴリ E: placeholder のみ */
+const placeholderOnlyInputArb = fc
+  .tuple(tagNameArb, fc.array(placeholderAttributeArb, { minLength: 1, maxLength: 3 }))
+  .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
 
 // カテゴリ A はどのモードでも成功することを確認する
 test("options property: カテゴリ A はどのモードでも成功する", () => {
@@ -101,6 +115,25 @@ test("options property: カテゴリ D は両方 true でのみ成功する", ()
     fc.property(optionsArb, bothInputArb, (options, input) => {
       const ot = new onlytag(options)
       if (options.allowDecorations && options.allowAttributes) {
+        const tokens = ot.tokenize(input)
+        const document = ot.parse(tokens)
+        assert.strictEqual(document.type, "document")
+      } else {
+        assert.throws(() => {
+          const tokens = ot.tokenize(input)
+          ot.parse(tokens)
+        })
+      }
+    }),
+  )
+})
+
+// カテゴリ E は allowAttributes=true かつ allowPlaceholders=true でのみ成功することを確認する
+test("options property: カテゴリ E は allowAttributes=true かつ allowPlaceholders=true でのみ成功する", () => {
+  fc.assert(
+    fc.property(optionsArb, placeholderOnlyInputArb, (options, input) => {
+      const ot = new onlytag(options)
+      if (options.allowAttributes && options.allowPlaceholders) {
         const tokens = ot.tokenize(input)
         const document = ot.parse(tokens)
         assert.strictEqual(document.type, "document")

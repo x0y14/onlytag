@@ -55,6 +55,11 @@ test("parser error: tag name with underscore fails", () => {
   expectParserErrorWithPosition("<A_b />")
 })
 
+// 閉じタグ名にアンダースコアを含む入力は失敗することを確認する
+test("parser error: closing tag name with underscore fails", () => {
+  expectParserErrorWithPosition("<A></A_b>")
+})
+
 // タグ名が数字で始まる入力は失敗することを確認する
 test("parser error: tag name starting with digit fails", () => {
   expectParserErrorWithPosition("<1Tag />")
@@ -73,6 +78,90 @@ test("parser error: missing equals before decoration fails", () => {
 
   assert.instanceOf(error, Error)
   assert.match((error as Error).message, /expected=<EQUALS>, actual=<DOT_IDENT>/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// PLACEHOLDERトークンの値が "$" で始まらない場合にparse段で失敗することを確認する
+test("parser error: placeholder token not starting with $ fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "x", position: 3 },
+    { kind: "EQUALS", value: "=", position: 4 },
+    { kind: "PLACEHOLDER", value: "abc", position: 5 },
+    { kind: "SLASH_GT", value: "/>", position: 8 },
+    { kind: "EOF", value: "", position: 10 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /expected to start with "\$"/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// PLACEHOLDERトークンの値が "$" のみで名前が空の場合にparse段で失敗することを確認する
+test("parser error: placeholder token with empty name fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "x", position: 3 },
+    { kind: "EQUALS", value: "=", position: 4 },
+    { kind: "PLACEHOLDER", value: "$", position: 5 },
+    { kind: "SLASH_GT", value: "/>", position: 6 },
+    { kind: "EOF", value: "", position: 8 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /name is empty/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// PLACEHOLDERトークンの名前に不正文字を含む場合にparse段で失敗することを確認する
+test("parser error: placeholder token with invalid name characters fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "x", position: 3 },
+    { kind: "EQUALS", value: "=", position: 4 },
+    { kind: "PLACEHOLDER", value: "$1abc", position: 5 },
+    { kind: "SLASH_GT", value: "/>", position: 10 },
+    { kind: "EOF", value: "", position: 12 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /contains invalid characters/)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 

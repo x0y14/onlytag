@@ -3,6 +3,8 @@ import * as fc from "fast-check"
 import {
   JsonValueSchema,
   DecorationSchema,
+  PlaceholderSchema,
+  AttributeValueSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
 } from "../src/ast.js"
@@ -84,6 +86,55 @@ test("schema decoration: rejects names with invalid chars", () => {
   )
 })
 
+// --- Placeholder関連 ---
+
+const validPlaceholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]+$/)
+const invalidPlaceholderNameArb = fc.oneof(
+  fc.constant(""),
+  fc.stringMatching(/^[0-9][a-zA-Z0-9-]*$/),
+  fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]*[^a-zA-Z0-9-]+[a-zA-Z0-9-]*$/),
+)
+
+// 有効な placeholder 名は常にバリデーション成功することを確認する
+test("schema placeholder: accepts valid placeholder names", () => {
+  fc.assert(
+    fc.property(validPlaceholderNameArb, (name) => {
+      const result = PlaceholderSchema.safeParse({ type: "placeholder", name })
+      assert.isTrue(result.success)
+    }),
+  )
+})
+
+// 不正な placeholder 名はバリデーション失敗することを確認する
+test("schema placeholder: rejects invalid placeholder names", () => {
+  fc.assert(
+    fc.property(invalidPlaceholderNameArb, (name) => {
+      const result = PlaceholderSchema.safeParse({ type: "placeholder", name })
+      assert.isFalse(result.success)
+    }),
+  )
+})
+
+// AttributeValueSchema が JSON 値を受理することを確認する
+test("schema attribute value: accepts json values", () => {
+  fc.assert(
+    fc.property(fc.jsonValue(), (value) => {
+      const result = AttributeValueSchema.safeParse(value)
+      assert.isTrue(result.success)
+    }),
+  )
+})
+
+// AttributeValueSchema が placeholder を受理することを確認する
+test("schema attribute value: accepts placeholder", () => {
+  fc.assert(
+    fc.property(validPlaceholderNameArb, (name) => {
+      const result = AttributeValueSchema.safeParse({ type: "placeholder", name })
+      assert.isTrue(result.success)
+    }),
+  )
+})
+
 // --- Token関連 ---
 
 const tokenKindValues = [
@@ -95,6 +146,7 @@ const tokenKindValues = [
   "DOT_IDENT",
   "EQUALS",
   "JSON_VALUE",
+  "PLACEHOLDER",
   "EOF",
 ] as const
 
@@ -148,12 +200,13 @@ test("schema token: rejects invalid kind", () => {
 const tagNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/)
 
 // letrec 内の再帰と組み合わせてもスタックオーバーフローしないよう、
-// 属性値はフラットなプリミティブのみにする
-const flatJsonValueArb = fc.oneof(
+// 属性値はフラットなプリミティブまたは placeholder のみにする
+const flatAttributeValueArb = fc.oneof(
   fc.string(),
   fc.double({ noNaN: true, noDefaultInfinity: true }),
   fc.boolean(),
   fc.constant(null),
+  validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
 )
 
 const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
@@ -161,7 +214,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
     type: fc.constant("element" as const),
     tagName: tagNameArb,
     decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
-    attributes: fc.dictionary(fc.string(), flatJsonValueArb, { maxKeys: 3 }),
+    attributes: fc.dictionary(fc.string(), flatAttributeValueArb, { maxKeys: 3 }),
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
     selfClosing: fc.constant(false),
   }),
@@ -171,7 +224,7 @@ const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
   tagName: tagNameArb,
   decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
-  attributes: fc.dictionary(fc.string(), flatJsonValueArb, { maxKeys: 3 }),
+  attributes: fc.dictionary(fc.string(), flatAttributeValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),
   selfClosing: fc.constant(true),
 })
@@ -218,13 +271,19 @@ test("schema document node: accepts valid document node", () => {
 // NormalizedOptionsSchema が有効な値を受理することを確認する
 test("schema normalized feature options: accepts valid options", () => {
   fc.assert(
-    fc.property(fc.boolean(), fc.boolean(), (allowDecorations, allowAttributes) => {
-      const result = NormalizedOptionsSchema.safeParse({
-        allowDecorations,
-        allowAttributes,
-      })
-      assert.isTrue(result.success)
-    }),
+    fc.property(
+      fc.boolean(),
+      fc.boolean(),
+      fc.boolean(),
+      (allowDecorations, allowAttributes, allowPlaceholders) => {
+        const result = NormalizedOptionsSchema.safeParse({
+          allowDecorations,
+          allowAttributes,
+          allowPlaceholders,
+        })
+        assert.isTrue(result.success)
+      },
+    ),
   )
 })
 
@@ -233,6 +292,7 @@ test("schema normalized feature options: rejects non-boolean values", () => {
   const result = NormalizedOptionsSchema.safeParse({
     allowDecorations: "yes",
     allowAttributes: 1,
+    allowPlaceholders: "no",
   })
   assert.isFalse(result.success)
 })

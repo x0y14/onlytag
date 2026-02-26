@@ -7,6 +7,7 @@ test("normalizeOptions: undefined はデフォルト値を返す", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
+    allowPlaceholders: true,
   })
 })
 
@@ -16,6 +17,7 @@ test("normalizeOptions: 空オブジェクトはデフォルト値を返す", ()
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
+    allowPlaceholders: true,
   })
 })
 
@@ -25,6 +27,7 @@ test("normalizeOptions: allowDecorations のみ指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: false,
     allowAttributes: true,
+    allowPlaceholders: true,
   })
 })
 
@@ -34,6 +37,17 @@ test("normalizeOptions: allowAttributes のみ指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: false,
+    allowPlaceholders: true,
+  })
+})
+
+// allowPlaceholders のみ指定した場合の正規化を確認する
+test("normalizeOptions: allowPlaceholders のみ指定", () => {
+  const result = normalizeOptions({ allowPlaceholders: false })
+  assert.deepStrictEqual(result, {
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: false,
   })
 })
 
@@ -46,6 +60,21 @@ test("normalizeOptions: 両方 false を指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: false,
     allowAttributes: false,
+    allowPlaceholders: true,
+  })
+})
+
+// 全て false を指定した場合の正規化を確認する
+test("normalizeOptions: 全て false を指定", () => {
+  const result = normalizeOptions({
+    allowDecorations: false,
+    allowAttributes: false,
+    allowPlaceholders: false,
+  })
+  assert.deepStrictEqual(result, {
+    allowDecorations: false,
+    allowAttributes: false,
+    allowPlaceholders: false,
   })
 })
 
@@ -58,5 +87,6 @@ test("normalizeOptions: 両方 true を明示指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
+    allowPlaceholders: true,
   })
 })

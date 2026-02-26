@@ -2,6 +2,7 @@ import { test, assert } from "vitest"
 import { onlytag } from "../src/onlytag.js"
 
 const ot = new onlytag()
+const otNoPh = new onlytag({ allowPlaceholders: false })
 
 function expectTokenizerErrorWithPosition(input: string): void {
   let error: unknown
@@ -67,4 +68,44 @@ test("tokenizer error: invalid null literal fails", () => {
 // JSON値の直後に境界なしで識別子が続く入力は失敗することを確認する
 test("tokenizer error: missing boundary after json value fails", () => {
   expectTokenizerErrorWithPosition('<A config={"k":1}next=2 />')
+})
+
+// $の後が数字で始まる placeholder は失敗することを確認する
+test("tokenizer error: placeholder starting with digit fails", () => {
+  expectTokenizerErrorWithPosition("<A attr=$1abc />")
+})
+
+// $の後が空白の placeholder は失敗することを確認する
+test("tokenizer error: placeholder with only dollar sign fails", () => {
+  expectTokenizerErrorWithPosition("<A attr=$ />")
+})
+
+// タグ名位置に $ は使用できないことを確認する
+test("tokenizer error: dollar sign in tag name position fails", () => {
+  expectTokenizerErrorWithPosition("<$ph />")
+})
+
+// デコレーション名位置に $ は使用できないことを確認する
+test("tokenizer error: dollar sign in decoration position fails", () => {
+  expectTokenizerErrorWithPosition("<A .$ph />")
+})
+
+// 属性名位置に $ は使用できないことを確認する
+test("tokenizer error: dollar sign as attribute name fails", () => {
+  expectTokenizerErrorWithPosition("<A $ph />")
+})
+
+// allowPlaceholders=false のとき placeholder はエラーになることを確認する
+test("tokenizer error: placeholder disallowed when allowPlaceholders=false", () => {
+  let error: unknown
+  try {
+    otNoPh.tokenize("<A attr=$abc />")
+  } catch (caught) {
+    error = caught
+  }
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
 })

@@ -9,6 +9,8 @@ test("api contract: exports required symbols", () => {
   assert.isDefined(onlytagModule.TokenKind)
   assert.isDefined(onlytagModule.JsonValueSchema)
   assert.isDefined(onlytagModule.DecorationSchema)
+  assert.isDefined(onlytagModule.PlaceholderSchema)
+  assert.isDefined(onlytagModule.AttributeValueSchema)
   assert.isDefined(onlytagModule.ElementNodeSchema)
   assert.isDefined(onlytagModule.DocumentNodeSchema)
 })
@@ -82,7 +84,7 @@ test("api contract: onlytag accepts partial feature options", () => {
 // dump でドキュメントノードを JSON 文字列にシリアライズできることを確認する
 test("api contract: dump serializes document node to json string", () => {
   const ot = new onlytag()
-  const doc = ot.parse(ot.tokenize("<A .bold text=\"hello\" />"))
+  const doc = ot.parse(ot.tokenize('<A .bold text="hello" />'))
   const json = ot.dump(doc)
   const parsed = JSON.parse(json)
   assert.equal(parsed.type, "document")
@@ -118,7 +120,7 @@ test("api contract: load deserializes json string to document node", () => {
 // dump -> load のラウンドトリップが元の値を復元できることを確認する
 test("api contract: dump and load are inverse operations (round-trip)", () => {
   const ot = new onlytag()
-  const doc = ot.parse(ot.tokenize("<A .bold text=\"hello\"><B /></A>"))
+  const doc = ot.parse(ot.tokenize('<A .bold text="hello"><B /></A>'))
   const json = ot.dump(doc)
   const loaded = ot.load(json)
   assert.deepEqual(loaded, doc)
@@ -134,4 +136,29 @@ test("api contract: load throws on invalid json", () => {
 test("api contract: load throws on json not matching document node schema", () => {
   const ot = new onlytag()
   assert.throws(() => ot.load('{"type":"unknown"}'), /invalid document node/)
+})
+
+// placeholder を含む dump/load ラウンドトリップが元の値を復元できることを確認する
+test("api contract: dump and load round-trip preserves placeholder", () => {
+  const ot = new onlytag()
+  const doc = ot.parse(ot.tokenize("<A attr=$myValue />"))
+  const json = ot.dump(doc)
+  const loaded = ot.load(json)
+  assert.deepEqual(loaded, doc)
+  assert.deepStrictEqual(loaded.children[0].attributes["attr"], {
+    type: "placeholder",
+    name: "myValue",
+  })
+})
+
+// PlaceholderSchema が有効な placeholder を受理することを確認する
+test("api contract: PlaceholderSchema accepts valid placeholder", () => {
+  const result = onlytagModule.PlaceholderSchema.safeParse({ type: "placeholder", name: "abc" })
+  assert.isTrue(result.success)
+})
+
+// PlaceholderSchema が不正な名前を拒否することを確認する
+test("api contract: PlaceholderSchema rejects invalid name", () => {
+  const result = onlytagModule.PlaceholderSchema.safeParse({ type: "placeholder", name: "1abc" })
+  assert.isFalse(result.success)
 })

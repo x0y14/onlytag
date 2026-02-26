@@ -1,13 +1,15 @@
 import { z } from "zod"
 
 /**
- * 機能オプション。decoration と attribute の使用可否を設定する
+ * 機能オプション。decoration・attribute・placeholder の使用可否を設定する
  * @param allowDecorations - decoration（.name）の使用を許可するか。省略時は true
  * @param allowAttributes - attribute（key=value）の使用を許可するか。省略時は true
+ * @param allowPlaceholders - placeholder（key=$name）の使用を許可するか。省略時は true
  */
 export interface Options {
   allowDecorations?: boolean
   allowAttributes?: boolean
+  allowPlaceholders?: boolean
 }
 
 /**
@@ -16,12 +18,14 @@ export interface Options {
 export interface NormalizedOptions {
   allowDecorations: boolean
   allowAttributes: boolean
+  allowPlaceholders: boolean
 }
 
 /** NormalizedOptions の Zod スキーマ */
 export const NormalizedOptionsSchema = z.object({
   allowDecorations: z.boolean(),
   allowAttributes: z.boolean(),
+  allowPlaceholders: z.boolean(),
 })
 
 /**
@@ -33,5 +37,6 @@ export function normalizeOptions(options?: Options): NormalizedOptions {
   return {
     allowDecorations: options?.allowDecorations ?? true,
     allowAttributes: options?.allowAttributes ?? true,
+    allowPlaceholders: options?.allowPlaceholders ?? true,
   }
 }
