@@ -263,3 +263,88 @@ test("parser: parses mixed json and placeholder attributes", () => {
   assert.deepStrictEqual(node.attributes["ph"], { type: "placeholder", name: "abc" })
   assert.equal(node.decorations[0].name, "deco")
 })
+
+// --- カスタムデリミタ統合テスト ---
+
+// パイプデリミタで自己閉じタグを解析できることを確認する
+test("parser: pipe delimiter self-closing tag", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const doc = otPipe.parse(otPipe.tokenize("|Br /|"))
+  assert.equal(doc.children.length, 1)
+  assert.equal(doc.children[0].tagName, "Br")
+  assert.equal(doc.children[0].selfClosing, true)
+})
+
+// パイプデリミタで開閉タグペアを解析できることを確認する
+test("parser: pipe delimiter open-close pair", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const doc = otPipe.parse(otPipe.tokenize("|Div|| /Div|"))
+  assert.equal(doc.children.length, 1)
+  assert.equal(doc.children[0].tagName, "Div")
+  assert.equal(doc.children[0].selfClosing, false)
+})
+
+// パイプデリミタでネストした要素を解析できることを確認する
+test("parser: pipe delimiter nested elements", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const doc = otPipe.parse(otPipe.tokenize("|Parent||Child /|| /Parent|"))
+  assert.equal(doc.children.length, 1)
+  const parent = doc.children[0]
+  assert.equal(parent.tagName, "Parent")
+  assert.equal(parent.children.length, 1)
+  assert.equal(parent.children[0].tagName, "Child")
+  assert.equal(parent.children[0].selfClosing, true)
+})
+
+// カスタムデリミタで属性付き要素を解析できることを確認する
+test("parser: custom delimiter with attributes", () => {
+  const otPercent = new onlytag({ tags: [{ opening: "%", closing: "%" }] })
+  const doc = otPercent.parse(otPercent.tokenize('%Identity name="Lumina" level=42 /%'))
+  const node = doc.children[0]
+  assert.equal(node.tagName, "Identity")
+  assert.equal(node.attributes["name"], "Lumina")
+  assert.equal(node.attributes["level"], 42)
+})
+
+// カスタムデリミタでデコレーション付き要素を解析できることを確認する
+test("parser: custom delimiter with decorations", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "(", closing: ")" }] })
+  const doc = otCustom.parse(otCustom.tokenize("(Card .elevated .rounded /)"))
+  const card = doc.children[0]
+  assert.equal(card.decorations.length, 2)
+  assert.equal(card.decorations[0].name, "elevated")
+  assert.equal(card.decorations[1].name, "rounded")
+})
+
+// カスタムデリミタで JSON オブジェクト属性を解析できることを確認する
+test("parser: custom delimiter with json object attribute", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "#", closing: "#" }] })
+  const doc = otCustom.parse(otCustom.tokenize('#Stats base={"hp": 1500} /#'))
+  assert.deepStrictEqual(doc.children[0].attributes["base"], { hp: 1500 })
+})
+
+// カスタムデリミタで placeholder 属性を解析できることを確認する
+test("parser: custom delimiter with placeholder attribute", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const doc = otCustom.parse(otCustom.tokenize("|A attr=$myValue /|"))
+  assert.deepStrictEqual(doc.children[0].attributes["attr"], {
+    type: "placeholder",
+    name: "myValue",
+  })
+})
+
+// 複数デリミタペアで異なるデリミタの要素をネストして解析できることを確認する
+test("parser: multiple delimiter pairs nested parsing", () => {
+  const otMulti = new onlytag({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "(", closing: ")" },
+    ],
+  })
+  const doc = otMulti.parse(otMulti.tokenize("<Parent>(Child /)</Parent>"))
+  assert.equal(doc.children.length, 1)
+  const parent = doc.children[0]
+  assert.equal(parent.tagName, "Parent")
+  assert.equal(parent.children.length, 1)
+  assert.equal(parent.children[0].tagName, "Child")
+})

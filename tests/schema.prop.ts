@@ -268,6 +268,17 @@ test("schema document node: accepts valid document node", () => {
 
 // --- NormalizedOptions関連 ---
 
+import { ALLOWED_DELIMITER_CHARS } from "../src/types.js"
+
+const allowedCharsArray = [...ALLOWED_DELIMITER_CHARS]
+
+const tagDelimiterPairArb = fc.record({
+  opening: fc.constantFrom(...allowedCharsArray),
+  closing: fc.constantFrom(...allowedCharsArray),
+})
+
+const tagsArb = fc.array(tagDelimiterPairArb, { minLength: 1, maxLength: 3 })
+
 // NormalizedOptionsSchema が有効な値を受理することを確認する
 test("schema normalized feature options: accepts valid options", () => {
   fc.assert(
@@ -275,11 +286,13 @@ test("schema normalized feature options: accepts valid options", () => {
       fc.boolean(),
       fc.boolean(),
       fc.boolean(),
-      (allowDecorations, allowAttributes, allowPlaceholders) => {
+      tagsArb,
+      (allowDecorations, allowAttributes, allowPlaceholders, tags) => {
         const result = NormalizedOptionsSchema.safeParse({
           allowDecorations,
           allowAttributes,
           allowPlaceholders,
+          tags,
         })
         assert.isTrue(result.success)
       },
@@ -293,6 +306,28 @@ test("schema normalized feature options: rejects non-boolean values", () => {
     allowDecorations: "yes",
     allowAttributes: 1,
     allowPlaceholders: "no",
+    tags: [{ opening: "<", closing: ">" }],
+  })
+  assert.isFalse(result.success)
+})
+
+// tags が空配列の場合は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects empty tags array", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
+    tags: [],
+  })
+  assert.isFalse(result.success)
+})
+
+// tags が欠落している場合は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects missing tags", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
   })
   assert.isFalse(result.success)
 })

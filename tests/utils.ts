@@ -1,18 +1,20 @@
 import { type NormalizedOptions } from "../src/types.js"
 
+const defaultTags = [{ opening: "<", closing: ">" }] as const
+
 /**
  * 全ての正規化済みオプション組み合わせを返す
  */
 export function getAllNormalizedOptions(): NormalizedOptions[] {
   return [
-    { allowDecorations: true, allowAttributes: true, allowPlaceholders: true },
-    { allowDecorations: true, allowAttributes: true, allowPlaceholders: false },
-    { allowDecorations: true, allowAttributes: false, allowPlaceholders: true },
-    { allowDecorations: true, allowAttributes: false, allowPlaceholders: false },
-    { allowDecorations: false, allowAttributes: true, allowPlaceholders: true },
-    { allowDecorations: false, allowAttributes: true, allowPlaceholders: false },
-    { allowDecorations: false, allowAttributes: false, allowPlaceholders: true },
-    { allowDecorations: false, allowAttributes: false, allowPlaceholders: false },
+    { allowDecorations: true, allowAttributes: true, allowPlaceholders: true, tags: [...defaultTags] },
+    { allowDecorations: true, allowAttributes: true, allowPlaceholders: false, tags: [...defaultTags] },
+    { allowDecorations: true, allowAttributes: false, allowPlaceholders: true, tags: [...defaultTags] },
+    { allowDecorations: true, allowAttributes: false, allowPlaceholders: false, tags: [...defaultTags] },
+    { allowDecorations: false, allowAttributes: true, allowPlaceholders: true, tags: [...defaultTags] },
+    { allowDecorations: false, allowAttributes: true, allowPlaceholders: false, tags: [...defaultTags] },
+    { allowDecorations: false, allowAttributes: false, allowPlaceholders: true, tags: [...defaultTags] },
+    { allowDecorations: false, allowAttributes: false, allowPlaceholders: false, tags: [...defaultTags] },
   ]
 }
 

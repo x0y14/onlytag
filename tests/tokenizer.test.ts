@@ -212,3 +212,143 @@ test("tokenizer: mixed json and placeholder attributes", () => {
     "EOF",
   ])
 })
+
+// --- カスタムデリミタ ---
+
+// パイプデリミタで自己閉じタグをトークナイズできることを確認する
+test("tokenizer: pipe delimiter self-closing tag", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const tokens = otPipe.tokenize("|A /|")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "SLASH_GT", "EOF"])
+})
+
+// パイプデリミタで開閉タグをトークナイズできることを確認する
+test("tokenizer: pipe delimiter open-close tag pair", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const tokens = otPipe.tokenize("|A|| /A|")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "GT", "LT_SLASH", "IDENT", "GT", "EOF"])
+})
+
+// パーセントデリミタで属性付きタグをトークナイズできることを確認する
+test("tokenizer: percent delimiter with attributes", () => {
+  const otPercent = new onlytag({ tags: [{ opening: "%", closing: "%" }] })
+  const tokens = otPercent.tokenize('%A name="hello" /%')
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "JSON_VALUE",
+    "SLASH_GT",
+    "EOF",
+  ])
+  assert.equal(tokens.find((t) => t.kind === "JSON_VALUE")!.value, '"hello"')
+})
+
+// カスタムデリミタでデコレーション付きタグをトークナイズできることを確認する
+test("tokenizer: custom delimiter with decorations", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "(", closing: ")" }] })
+  const tokens = otCustom.tokenize("(Card .elevated /)")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "DOT_IDENT", "SLASH_GT", "EOF"])
+  assert.equal(tokens.find((t) => t.kind === "DOT_IDENT")!.value, ".elevated")
+})
+
+// カスタムデリミタで JSON オブジェクト属性をトークナイズできることを確認する
+test("tokenizer: custom delimiter with json object attribute", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "#", closing: "#" }] })
+  const tokens = otCustom.tokenize('#Stats base={"hp": 100} /#')
+  const jsonToken = tokens.find((t) => t.kind === "JSON_VALUE")
+  assert.equal(jsonToken!.value, '{"hp": 100}')
+})
+
+// 複数デリミタペアで混在入力をトークナイズできることを確認する
+test("tokenizer: multiple delimiter pairs", () => {
+  const otMulti = new onlytag({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "(", closing: ")" },
+    ],
+  })
+  const tokens1 = otMulti.tokenize("<A />")
+  assert.deepStrictEqual(
+    tokens1.map((t) => t.kind),
+    ["LT", "IDENT", "SLASH_GT", "EOF"],
+  )
+  const tokens2 = otMulti.tokenize("(B /)")
+  assert.deepStrictEqual(
+    tokens2.map((t) => t.kind),
+    ["LT", "IDENT", "SLASH_GT", "EOF"],
+  )
+})
+
+// 複数デリミタペアを混在使用してネストしたタグをトークナイズできることを確認する
+test("tokenizer: multiple delimiter pairs nested", () => {
+  const otMulti = new onlytag({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "(", closing: ")" },
+    ],
+  })
+  const tokens = otMulti.tokenize("<A>(B /)</A>")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT", "IDENT", "GT",
+    "LT", "IDENT", "SLASH_GT",
+    "LT_SLASH", "IDENT", "GT",
+    "EOF",
+  ])
+})
+
+// opening === closing の場合に閉じタグの /closing を正しくトークナイズできることを確認する
+test("tokenizer: same opening and closing delimiter with close tag", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const tokens = otPipe.tokenize("|Parent||Child /|| /Parent|")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT", "IDENT", "GT",
+    "LT", "IDENT", "SLASH_GT",
+    "LT_SLASH", "IDENT", "GT",
+    "EOF",
+  ])
+})
+
+// カスタムデリミタで placeholder をトークナイズできることを確認する
+test("tokenizer: custom delimiter with placeholder", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const tokens = otCustom.tokenize("|A attr=$myValue /|")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "PLACEHOLDER",
+    "SLASH_GT",
+    "EOF",
+  ])
+  assert.equal(tokens.find((t) => t.kind === "PLACEHOLDER")!.value, "$myValue")
+})
+
+// カスタムデリミタで JSON 値の境界を正しく検出することを確認する
+test("tokenizer: custom delimiter json boundary detection", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "(", closing: ")" }] })
+  const tokens = otCustom.tokenize('(A config={"k":1}/)')
+  const jsonToken = tokens.find((t) => t.kind === "JSON_VALUE")
+  assert.equal(jsonToken!.value, '{"k":1}')
+})
+
+// カスタムデリミタで < と > が通常文字扱いになりエラーとなることを確認する
+test("tokenizer: angle brackets are invalid with custom-only delimiter", () => {
+  const otCustom = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  let error: unknown
+  try {
+    otCustom.tokenize("<A />")
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+})

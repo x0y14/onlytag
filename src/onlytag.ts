@@ -8,7 +8,7 @@ import type {
   AttributeValue,
 } from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
-import type { Options, NormalizedOptions } from "./types.js"
+import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 
@@ -68,17 +68,18 @@ function tokenError(message: string, position: number): never {
 }
 
 /**
- * 指定位置がJSON値の境界（空白・タグ閉じ・入力末尾）かどうかを判定する
+ * 指定位置がJSON値の境界（空白・閉じデリミタ・/+閉じデリミタ・入力末尾）かどうかを判定する
  * @param input - 入力文字列全体
  * @param end - 判定対象の位置
+ * @param closing - 現在のタグの閉じデリミタ文字
  * @returns 境界であればtrue
  */
-function isJsonBoundary(input: string, end: number): boolean {
+function isJsonBoundary(input: string, end: number, closing: string): boolean {
   const len = input.length
   if (end >= len) return true
   const ch = input[end]
-  if (isWhitespace(ch) || ch === ">") return true
-  if (ch === "/" && end + 1 < len && input[end + 1] === ">") return true
+  if (isWhitespace(ch) || ch === closing) return true
+  if (ch === "/" && end + 1 < len && input[end + 1] === closing) return true
   return false
 }
 
@@ -104,14 +105,15 @@ function canStartJsonValue(ch: string): boolean {
  * エラーメッセージ用に、不正なリテラルのプレビュー文字列を取得する
  * @param input - 入力文字列全体
  * @param pos - プレビュー開始位置
+ * @param closing - 現在のタグの閉じデリミタ文字
  * @returns プレビュー文字列。入力末尾の場合は`"<eof>"`
  */
-function readLiteralPreview(input: string, pos: number): string {
+function readLiteralPreview(input: string, pos: number, closing: string): string {
   const len = input.length
   let i = pos
   while (i < len) {
     const ch = input[i]
-    if (isWhitespace(ch) || ch === "<" || ch === ">" || ch === "/" || ch === "=") break
+    if (isWhitespace(ch) || ch === closing || ch === "/" || ch === "=") break
     i++
   }
   if (i === pos) return "<eof>"
@@ -122,10 +124,11 @@ function readLiteralPreview(input: string, pos: number): string {
  * 入力文字列からJSON値を読み取る。境界位置まで貪欲にマッチを試みる
  * @param input - 入力文字列全体
  * @param pos - 読み取り開始位置
+ * @param closing - 現在のタグの閉じデリミタ文字
  * @returns JSON値の生文字列と読み取り後の位置のタプル
  * @throws {Error} JSON値が見つからない、または不正な場合
  */
-function readJsonValue(input: string, pos: number): [value: string, newPos: number] {
+function readJsonValue(input: string, pos: number, closing: string): [value: string, newPos: number] {
   const len = input.length
 
   // 属性値の前にある空白を読み飛ばす
@@ -135,7 +138,7 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
     tokenError("missing attribute value: expected=<json-value>, actual=<eof>", pos)
   }
 
-  if (isJsonBoundary(input, pos)) {
+  if (isJsonBoundary(input, pos, closing)) {
     const actual = input[pos] === "/" ? "/>" : input[pos]
     tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos)
   }
@@ -146,7 +149,7 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
 
   let lastDecodeIssue = "invalid json"
   for (let end = pos + 1; end <= len; end++) {
-    if (!isJsonBoundary(input, end)) continue
+    if (!isJsonBoundary(input, end, closing)) continue
     const candidate = input.slice(pos, end)
     const result = decodeJsonString(candidate)
     if (result.success) {
@@ -156,7 +159,7 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
   }
 
   tokenError(
-    `invalid json attribute value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos)}>, detail=<${lastDecodeIssue}>`,
+    `invalid json attribute value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos, closing)}>, detail=<${lastDecodeIssue}>`,
     pos,
   )
 }
@@ -184,6 +187,43 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
   return [input.slice(start, pos), pos]
 }
 
+// --- トークナイザ内部の型定義 ---
+
+/**
+ * 開始デリミタ文字から対応するペア情報を引くためのルックアップエントリ
+ */
+interface DelimiterLookupEntry {
+  pairIndex: number
+  closing: string
+}
+
+/**
+ * デリミタペア配列からルックアップマップを構築する
+ * @param tags - デリミタペアの配列
+ * @returns 開始デリミタ文字をキーとするルックアップマップ
+ */
+function buildOpeningLookup(tags: TagDelimiterPair[]): Map<string, DelimiterLookupEntry> {
+  const map = new Map<string, DelimiterLookupEntry>()
+  for (let i = 0; i < tags.length; i++) {
+    map.set(tags[i].opening, { pairIndex: i, closing: tags[i].closing })
+  }
+  return map
+}
+
+/**
+ * 全デリミタ文字（opening + closing）の集合を構築する
+ * @param tags - デリミタペアの配列
+ * @returns デリミタ文字の集合
+ */
+function buildAllDelimiterChars(tags: TagDelimiterPair[]): Set<string> {
+  const set = new Set<string>()
+  for (const pair of tags) {
+    set.add(pair.opening)
+    set.add(pair.closing)
+  }
+  return set
+}
+
 // --- tokenize 本体 ---
 
 /**
@@ -198,6 +238,21 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
   const len = input.length
   let pos = 0
   let lastKind: TokenKind | null = null
+
+  // 状態マシン用
+  let insideTag = false
+  let currentClosing: string | null = null
+
+  // ルックアップ構造
+  const openingLookup = buildOpeningLookup(options.tags)
+  const allDelimiterChars = buildAllDelimiterChars(options.tags)
+
+  // closing 文字から、それが opening でもあるペアの closing を引くマップ
+  // （opening === closing のケースでタグ内の閉じ判定に使う）
+  const closingToClosingLookup = new Map<string, string>()
+  for (const pair of options.tags) {
+    closingToClosingLookup.set(pair.closing, pair.closing)
+  }
 
   function emit(kind: TokenKind, value: string, position: number) {
     tokens.push({ kind, value, position })
@@ -222,7 +277,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         emit("PLACEHOLDER", value, start)
         pos = newPos
       } else {
-        const [value, newPos] = readJsonValue(input, pos)
+        const [value, newPos] = readJsonValue(input, pos, currentClosing!)
         emit("JSON_VALUE", value, start)
         pos = newPos
       }
@@ -232,51 +287,42 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     if (pos >= len) break
 
     const start = pos
-
     const ch = input[pos]
 
-    switch (ch) {
-      case "<": {
-        let ltLookAhead = pos + 1
-        while (ltLookAhead < len && isWhitespace(input[ltLookAhead])) ltLookAhead++
-        if (ltLookAhead < len && input[ltLookAhead] === "/") {
-          emit("LT_SLASH", "</", start)
-          pos = ltLookAhead + 1
-        } else {
-          emit("LT", "<", start)
-          pos += 1
-        }
-        break
+    if (insideTag) {
+      // --- タグ内部 ---
+      const closing = currentClosing!
+
+      if (ch === closing) {
+        // 閉じデリミタ → GT
+        emit("GT", closing, start)
+        pos += 1
+        insideTag = false
+        currentClosing = null
+        continue
       }
 
-      case ">":
-        emit("GT", ">", start)
-        pos += 1
-        break
+      if (ch === "/" && pos + 1 < len && input[pos + 1] === closing) {
+        // /closing → SLASH_GT
+        emit("SLASH_GT", "/" + closing, start)
+        pos += 2
+        insideTag = false
+        currentClosing = null
+        continue
+      }
 
-      case "/":
-        if (pos + 1 < len && input[pos + 1] === ">") {
-          emit("SLASH_GT", "/>", start)
-          pos += 2
-        } else {
-          const next = pos + 1 < len ? input[pos + 1] : "<eof>"
-          tokenError(`invalid slash token: expected=</>, actual=</${next}>`, pos)
-        }
-        break
-
-      case "=":
-        // attribute が禁止されている場合は即座にエラー
+      if (ch === "=") {
         if (!options.allowAttributes) {
           tokenError(`attributes are not allowed: found attribute at position`, start)
         }
         emit("EQUALS", "=", start)
         pos += 1
-        break
+        continue
+      }
 
-      case ".":
+      if (ch === ".") {
         pos += 1
         if (pos < len && isIdentChar(input[pos])) {
-          // decoration が禁止されている場合は即座にエラー
           if (!options.allowDecorations) {
             tokenError(`decorations are not allowed: found decoration at position`, start)
           }
@@ -290,19 +336,79 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
             start,
           )
         }
-        break
+        continue
+      }
 
-      default:
-        if (isIdentChar(ch)) {
-          while (pos < len && isIdentChar(input[pos])) pos++
-          emit("IDENT", input.slice(start, pos), start)
+      if (ch === "/") {
+        // "/" だがその次が closing ではない
+        const next = pos + 1 < len ? input[pos + 1] : "<eof>"
+        tokenError(`invalid slash token: expected=</${closing}>, actual=</${next}>`, pos)
+      }
+
+      if (isIdentChar(ch)) {
+        while (pos < len && isIdentChar(input[pos])) pos++
+        emit("IDENT", input.slice(start, pos), start)
+        continue
+      }
+
+      tokenError(
+        `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
+        pos,
+      )
+    } else {
+      // --- タグ外部 ---
+
+      // 開始デリミタにマッチするか確認
+      const entry = openingLookup.get(ch)
+      if (entry) {
+        const closing = entry.closing
+
+        if (ch === closing) {
+          // opening === closing のケース（例: |/|）
+          // 次の非空白文字が "/" なら LT_SLASH
+          let lookAhead = pos + 1
+          while (lookAhead < len && isWhitespace(input[lookAhead])) lookAhead++
+
+          if (lookAhead < len && input[lookAhead] === "/") {
+            emit("LT_SLASH", ch + "/", start)
+            pos = lookAhead + 1
+          } else {
+            emit("LT", ch, start)
+            pos += 1
+          }
         } else {
-          tokenError(
-            `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
-            pos,
-          )
+          // opening !== closing の通常ケース
+          let lookAhead = pos + 1
+          while (lookAhead < len && isWhitespace(input[lookAhead])) lookAhead++
+
+          if (lookAhead < len && input[lookAhead] === "/") {
+            emit("LT_SLASH", ch + "/", start)
+            pos = lookAhead + 1
+          } else {
+            emit("LT", ch, start)
+            pos += 1
+          }
         }
-        break
+
+        insideTag = true
+        currentClosing = closing
+        continue
+      }
+
+      // デリミタ以外の文字はタグ外部では不正
+      if (allDelimiterChars.has(ch)) {
+        // closing デリミタがタグ外部に出現した場合
+        tokenError(
+          `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
+          pos,
+        )
+      }
+
+      // 通常の不正文字
+      tokenError(
+        `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
+        pos,
+      )
     }
   }
 
