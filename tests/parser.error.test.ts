@@ -103,3 +103,60 @@ test("parser error: invalid json token payload fails in parse stage", () => {
   assert.match((error as Error).message, /invalid json attribute/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
+
+// 複数タグデリミタ設定で自己閉じタグの閉じデリミタが不一致の場合はエラーになることを確認する
+test("parser error: self-close delimiter mismatch in multi-tag config", () => {
+  const otMulti = new onlytag({ tags: [{ opening: "<", closing: ">" }, { opening: "|", closing: "$" }] })
+  let error: unknown
+  try {
+    otMulti.parse(otMulti.tokenize("|A />"))
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// 複数タグデリミタ設定で開きタグの閉じデリミタが不一致の場合はエラーになることを確認する
+test("parser error: open-tag closing delimiter mismatch in multi-tag config", () => {
+  const otMulti = new onlytag({ tags: [{ opening: "<", closing: ">" }, { opening: "|", closing: "$" }] })
+  let error: unknown
+  try {
+    otMulti.parse(otMulti.tokenize("|A >"))
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// 複数タグデリミタ設定で閉じタグの開きデリミタが不一致の場合はエラーになることを確認する
+test("parser error: closing tag opening delimiter mismatch in multi-tag config", () => {
+  const otMulti = new onlytag({ tags: [{ opening: "<", closing: ">" }, { opening: "|", closing: "$" }] })
+  let error: unknown
+  try {
+    otMulti.parse(otMulti.tokenize("|A$</A>"))
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// 閉じタグ名が無効なタグ名（数字始まり）の場合はエラーになることを確認する
+test("parser error: closing tag name starting with digit", () => {
+  expectParserErrorWithPosition("<A></1A>")
+})
+
+// 複数タグデリミタ設定で閉じタグの末尾デリミタが不一致の場合はエラーになることを確認する
+test("parser error: closing tag final delimiter mismatch in multi-tag config", () => {
+  const otMulti = new onlytag({ tags: [{ opening: "<", closing: ">" }, { opening: "|", closing: "$" }] })
+  let error: unknown
+  try {
+    otMulti.parse(otMulti.tokenize("|A$|/A>"))
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
