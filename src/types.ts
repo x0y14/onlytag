@@ -1,13 +1,17 @@
 import { z } from "zod"
 
 /**
- * 機能オプション。decoration と attribute の使用可否を設定する
+ * 機能オプション。decoration・attribute・inject・logic の使用可否を設定する
  * @param allowDecorations - decoration（.name）の使用を許可するか。省略時は true
  * @param allowAttributes - attribute（key=value）の使用を許可するか。省略時は true
+ * @param allowInject - inject（$variable）の属性値としての使用を許可するか。省略時は true
+ * @param allowLogic - logic（funcname(args)）の属性値としての使用を許可するか。省略時は true
  */
 export interface Options {
   allowDecorations?: boolean
   allowAttributes?: boolean
+  allowInject?: boolean
+  allowLogic?: boolean
 }
 
 /**
@@ -16,12 +20,16 @@ export interface Options {
 export interface NormalizedOptions {
   allowDecorations: boolean
   allowAttributes: boolean
+  allowInject: boolean
+  allowLogic: boolean
 }
 
 /** NormalizedOptions の Zod スキーマ */
 export const NormalizedOptionsSchema = z.object({
   allowDecorations: z.boolean(),
   allowAttributes: z.boolean(),
+  allowInject: z.boolean(),
+  allowLogic: z.boolean(),
 })
 
 /**
@@ -33,5 +41,7 @@ export function normalizeOptions(options?: Options): NormalizedOptions {
   return {
     allowDecorations: options?.allowDecorations ?? true,
     allowAttributes: options?.allowAttributes ?? true,
+    allowInject: options?.allowInject ?? true,
+    allowLogic: options?.allowLogic ?? true,
   }
 }

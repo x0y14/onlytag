@@ -10,6 +10,10 @@ export const TokenKind = z.enum([
   "DOT_IDENT", // .デコレーション（ドット含む）
   "EQUALS", // =
   "JSON_VALUE", // JSON値の生文字列
+  "INJECT", // $変数名（インジェクト）
+  "LPAREN", // ( ロジック引数リストの開始
+  "RPAREN", // ) ロジック引数リストの終了
+  "COMMA", // , ロジック引数の区切り
   "EOF",
 ])
 /** トークン種別の型 */

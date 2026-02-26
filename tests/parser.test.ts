@@ -236,3 +236,50 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
+
+// inject属性を InjectNode としてパースできることを確認する
+test("parser: parses inject attribute value", () => {
+  const doc = ot.parse(ot.tokenize("<A mode=$dark />"))
+  const attr = doc.children[0].attributes["mode"]
+  assert.deepStrictEqual(attr, { type: "inject", name: "dark" })
+})
+
+// ロジック属性を LogicNode としてパースできることを確認する
+test("parser: parses logic attribute value", () => {
+  const doc = ot.parse(ot.tokenize('<A cond=equal($mode,"dark") />'))
+  const attr = doc.children[0].attributes["cond"]
+  assert.deepStrictEqual(attr, {
+    type: "logic",
+    name: "equal",
+    args: [{ type: "inject", name: "mode" }, "dark"],
+  })
+})
+
+// 複数引数のロジックを正しい LogicNode としてパースできることを確認する
+test("parser: parses logic with multiple json args", () => {
+  const doc = ot.parse(ot.tokenize("<A v=add(1,2) />"))
+  const attr = doc.children[0].attributes["v"]
+  assert.deepStrictEqual(attr, { type: "logic", name: "add", args: [1, 2] })
+})
+
+// 空引数リストのロジックをパースできることを確認する
+test("parser: parses logic with empty args", () => {
+  const doc = ot.parse(ot.tokenize("<A v=now() />"))
+  const attr = doc.children[0].attributes["v"]
+  assert.deepStrictEqual(attr, { type: "logic", name: "now", args: [] })
+})
+
+// ネストしたロジックを正しい LogicNode としてパースできることを確認する
+test("parser: parses nested logic", () => {
+  const doc = ot.parse(ot.tokenize('<A v=outer(inner($x,"y"),1) />'))
+  const attr = doc.children[0].attributes["v"]
+  assert.deepStrictEqual(attr, {
+    type: "logic",
+    name: "outer",
+    args: [
+      { type: "logic", name: "inner", args: [{ type: "inject", name: "x" }, "y"] },
+      1,
+    ],
+  })
+})
+

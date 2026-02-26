@@ -218,13 +218,21 @@ test("schema document node: accepts valid document node", () => {
 // NormalizedOptionsSchema が有効な値を受理することを確認する
 test("schema normalized feature options: accepts valid options", () => {
   fc.assert(
-    fc.property(fc.boolean(), fc.boolean(), (allowDecorations, allowAttributes) => {
-      const result = NormalizedOptionsSchema.safeParse({
-        allowDecorations,
-        allowAttributes,
-      })
-      assert.isTrue(result.success)
-    }),
+    fc.property(
+      fc.boolean(),
+      fc.boolean(),
+      fc.boolean(),
+      fc.boolean(),
+      (allowDecorations, allowAttributes, allowInject, allowLogic) => {
+        const result = NormalizedOptionsSchema.safeParse({
+          allowDecorations,
+          allowAttributes,
+          allowInject,
+          allowLogic,
+        })
+        assert.isTrue(result.success)
+      },
+    ),
   )
 })
 

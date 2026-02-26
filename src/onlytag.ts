@@ -1,5 +1,5 @@
 import type { Token, TokenKind } from "./token.js"
-import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js"
+import type { DocumentNode, ElementNode, Decoration, JsonValue, AttributeValue, InjectNode, LogicNode, LogicArg } from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions } from "./types.js"
 import { normalizeOptions } from "./types.js"
@@ -63,6 +63,20 @@ function isJsonBoundary(input: string, end: number): boolean {
   const ch = input[end]
   if (isWhitespace(ch) || ch === ">") return true
   if (ch === "/" && end + 1 < len && input[end + 1] === ">") return true
+  return false
+}
+
+/**
+ * 指定位置がロジック引数内のJSON値の境界（空白・カンマ・閉じ括弧）かどうかを判定する
+ * @param input - 入力文字列全体
+ * @param end - 判定対象の位置
+ * @returns 境界であればtrue
+ */
+function isJsonBoundaryInLogic(input: string, end: number): boolean {
+  const len = input.length
+  if (end >= len) return true
+  const ch = input[end]
+  if (isWhitespace(ch) || ch === "," || ch === ")") return true
   return false
 }
 
@@ -148,6 +162,41 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
 // --- tokenize 本体 ---
 
 /**
+ * ロジック引数内で入力文字列からJSON値を読み取る。カンマ・閉じ括弧・空白を境界とする
+ * @param input - 入力文字列全体
+ * @param pos - 読み取り開始位置
+ * @returns JSON値の生文字列と読み取り後の位置のタプル
+ * @throws {Error} JSON値が見つからない、または不正な場合
+ */
+function readJsonValueInLogic(input: string, pos: number): [value: string, newPos: number] {
+  const len = input.length
+
+  if (pos >= len) {
+    tokenError("missing argument value: expected=<json-value>, actual=<eof>", pos)
+  }
+
+  if (!canStartJsonValue(input[pos])) {
+    tokenError(`invalid json value start: expected=<json-start>, actual=<${input[pos]}>`, pos)
+  }
+
+  let lastDecodeIssue = "invalid json"
+  for (let end = pos + 1; end <= len; end++) {
+    if (!isJsonBoundaryInLogic(input, end)) continue
+    const candidate = input.slice(pos, end)
+    const result = decodeJsonString(candidate)
+    if (result.success) {
+      return [candidate, end]
+    }
+    lastDecodeIssue = result.error.issues[0]?.message ?? "invalid json"
+  }
+
+  tokenError(
+    `invalid json argument value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos)}>, detail=<${lastDecodeIssue}>`,
+    pos,
+  )
+}
+
+/**
  * 入力文字列をトークン列に分割する
  * @param input - onlytagマークアップの入力文字列
  * @param options - 正規化済みの機能オプション
@@ -159,23 +208,88 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
   const len = input.length
   let pos = 0
   let lastKind: TokenKind | null = null
+  let logicDepth = 0
+  let expectLPAREN = false
 
   function emit(kind: TokenKind, value: string, position: number) {
     tokens.push({ kind, value, position })
     lastKind = kind
   }
 
+  /**
+   * 値読み取り位置（EQUALS の直後、またはロジック引数内の LPAREN/COMMA の直後）で
+   * inject・ロジック関数名・JSON値のいずれかを読み取る。
+   * inject または JSON値を読み取った場合は true を返す。
+   * ロジック関数名（ident の直後が ( ）の場合はトークンを emit せずに false を返し、
+   * 呼び出し元がメインループに戻って IDENT を読み取るよう委ねる。
+   */
+  function tryReadValue(inLogic: boolean): boolean {
+    // inject: $ident
+    if (pos < len && input[pos] === "$") {
+      if (!options.allowInject) {
+        tokenError(`inject is not allowed: found inject at position`, pos)
+      }
+      const start = pos++
+      const identStart = pos
+      while (pos < len && isIdentChar(input[pos])) pos++
+      if (pos === identStart) {
+        tokenError(
+          `invalid inject token: expected=<$[A-Za-z][A-Za-z0-9-]*>, actual=<$${pos < len ? input[pos] : "<eof>"}>`,
+          start,
+        )
+      }
+      emit("INJECT", input.slice(start, pos), start)
+      return true
+    }
+
+    // ident が ( に続く場合はロジック関数名 → emit せずに false を返す
+    if (pos < len && isIdentChar(input[pos])) {
+      let tp = pos
+      while (tp < len && isIdentChar(input[tp])) tp++
+      let ws = tp
+      while (ws < len && isWhitespace(input[ws])) ws++
+      if (ws < len && input[ws] === "(") {
+        // ロジック関数名: メインループに処理を委ねる
+        if (!options.allowLogic) {
+          tokenError(`logic is not allowed: found logic at position`, pos)
+        }
+        expectLPAREN = true
+        return false
+      }
+      // ident だが ( が続かない → JSON値（true/false/null 等）として読む
+    }
+
+    // JSON値を読み取る
+    const start = pos
+    if (inLogic) {
+      const [value, newPos] = readJsonValueInLogic(input, pos)
+      emit("JSON_VALUE", value, start)
+      pos = newPos
+    } else {
+      const [value, newPos] = readJsonValue(input, pos)
+      emit("JSON_VALUE", value, start)
+      pos = newPos
+    }
+    return true
+  }
+
   while (true) {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は JSON 値として読む
+    // EQUALS の直後は属性値として読む（inject / ロジック / JSON）
     if (lastKind === "EQUALS") {
-      const start = pos
-      const [value, newPos] = readJsonValue(input, pos)
-      emit("JSON_VALUE", value, start)
-      pos = newPos
-      continue
+      if (tryReadValue(false)) continue
+      // tryReadValue が false を返した場合はロジック関数名の IDENT を読む（フォールスルー）
+    }
+
+    // ロジック引数内の LPAREN/COMMA の直後は引数値として読む
+    if ((lastKind === "LPAREN" || lastKind === "COMMA") && logicDepth > 0) {
+      // ) が来た場合は空引数リストまたは引数終了 → メインループに委ねる
+      if (pos < len && input[pos] !== ")") {
+        if (tryReadValue(true)) continue
+        // ロジック関数名の場合はフォールスルー
+      }
     }
 
     if (pos >= len) break
@@ -219,6 +333,42 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
           tokenError(`attributes are not allowed: found attribute at position`, start)
         }
         emit("EQUALS", "=", start)
+        pos += 1
+        break
+
+      case "(":
+        if (!expectLPAREN) {
+          tokenError(
+            `invalid token character: expected=<identifier|syntax-token>, actual=<(>`,
+            start,
+          )
+        }
+        expectLPAREN = false
+        emit("LPAREN", "(", start)
+        pos += 1
+        logicDepth++
+        break
+
+      case ")":
+        if (logicDepth === 0) {
+          tokenError(
+            `invalid token character: expected=<identifier|syntax-token>, actual=<)>`,
+            start,
+          )
+        }
+        emit("RPAREN", ")", start)
+        pos += 1
+        logicDepth--
+        break
+
+      case ",":
+        if (logicDepth === 0) {
+          tokenError(
+            `invalid token character: expected=<identifier|syntax-token>, actual=<,>`,
+            start,
+          )
+        }
+        emit("COMMA", ",", start)
         pos += 1
         break
 
@@ -302,6 +452,63 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     return advance()
   }
 
+  /**
+   * 属性値トークンを読んでASTノードに変換する。
+   * JSON値・インジェクト（$variable）・ロジック（funcname(args)）を処理する
+   */
+  function parseAttributeValue(): AttributeValue {
+    const tok = peek()
+
+    // インジェクト: $variable
+    if (tok.kind === "INJECT") {
+      if (!options.allowInject) {
+        parseError(`inject is not allowed: found inject "${tok.value}"`, tok.position)
+      }
+      advance()
+      const injectNode: InjectNode = { type: "inject", name: tok.value.slice(1) }
+      return injectNode
+    }
+
+    // ロジック: funcname(arg1, arg2, ...)
+    if (tok.kind === "IDENT") {
+      if (!options.allowLogic) {
+        parseError(`logic is not allowed: found logic "${tok.value}"`, tok.position)
+      }
+      const funcName = advance().value
+      expect("LPAREN")
+      const args: LogicArg[] = []
+      while (peek().kind !== "RPAREN") {
+        if (args.length > 0) {
+          expect("COMMA")
+        }
+        args.push(parseAttributeValue() as LogicArg)
+      }
+      expect("RPAREN")
+      const logicNode: LogicNode = { type: "logic", name: funcName, args }
+      return logicNode
+    }
+
+    // JSON値
+    if (tok.kind === "JSON_VALUE") {
+      const jsonToken = advance()
+      const parsed = decodeJsonString(jsonToken.value)
+      if (!parsed.success) {
+        const detail = parsed.error.issues[0]!.message
+        parseError(
+          `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, detail=<${detail}>`,
+          jsonToken.position,
+        )
+      }
+      encodeJsonValue(parsed.data as JsonValue)
+      return parsed.data as JsonValue
+    }
+
+    parseError(
+      `unexpected token in attribute value: expected=<value>, actual=<${tok.kind}>, value="${tok.value}"`,
+      tok.position,
+    )
+  }
+
   function parseElement(): ElementNode {
     expect("LT")
     const tagToken = expect("IDENT")
@@ -315,7 +522,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
     // デコレーションと属性
     const decorations: Decoration[] = []
-    const attributes: Record<string, JsonValue> = {}
+    const attributes: Record<string, AttributeValue> = {}
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
@@ -332,17 +539,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
-        const jsonToken = expect("JSON_VALUE")
-        const parsed = decodeJsonString(jsonToken.value)
-        if (!parsed.success) {
-          const detail = parsed.error.issues[0]!.message
-          parseError(
-            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
-            jsonToken.position,
-          )
-        }
-        encodeJsonValue(parsed.data as JsonValue)
-        attributes[attrName] = parsed.data as JsonValue
+        attributes[attrName] = parseAttributeValue()
       }
     }
 
