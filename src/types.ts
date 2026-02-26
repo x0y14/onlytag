@@ -51,6 +51,16 @@ export const NormalizedOptionsSchema = z.object({
   allowAttributes: z.boolean(),
   allowPlaceholders: z.boolean(),
   tags: z.array(TagDelimiterPairSchema).min(1),
+}).superRefine((data, ctx) => {
+  try {
+    validateTags(data.tags)
+  } catch (error) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: (error as Error).message,
+      path: ["tags"],
+    })
+  }
 })
 
 /** デフォルトのデリミタペア */

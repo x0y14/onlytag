@@ -305,12 +305,17 @@ import { ALLOWED_DELIMITER_CHARS } from "../src/types.js"
 
 const allowedCharsArray = [...ALLOWED_DELIMITER_CHARS]
 
-const tagDelimiterPairArb = fc.record({
-  opening: fc.constantFrom(...allowedCharsArray),
-  closing: fc.constantFrom(...allowedCharsArray),
-})
-
-const tagsArb = fc.array(tagDelimiterPairArb, { minLength: 1, maxLength: 3 })
+// validateTags 互換の arbitrary: 異なるペア間で文字が重複しない tags を生成
+const validTagsArb = fc
+  .shuffledSubarray(allowedCharsArray, { minLength: 2, maxLength: 6 })
+  .map((chars) => {
+    const pairs: { opening: string; closing: string }[] = []
+    for (let index = 0; index + 1 < chars.length; index += 2) {
+      pairs.push({ opening: chars[index], closing: chars[index + 1] })
+    }
+    return pairs
+  })
+  .filter((pairs) => pairs.length >= 1)
 
 // NormalizedOptionsSchema が有効な値を受理することを確認する
 test("schema normalized feature options: accepts valid options", () => {
@@ -319,7 +324,7 @@ test("schema normalized feature options: accepts valid options", () => {
       fc.boolean(),
       fc.boolean(),
       fc.boolean(),
-      tagsArb,
+      validTagsArb,
       (allowDecorations, allowAttributes, allowPlaceholders, tags) => {
         const result = NormalizedOptionsSchema.safeParse({
           allowDecorations,
@@ -351,6 +356,31 @@ test("schema normalized feature options: rejects empty tags array", () => {
     allowAttributes: true,
     allowPlaceholders: true,
     tags: [],
+  })
+  assert.isFalse(result.success)
+})
+
+// 許可文字外の opening を含む tags は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects tags with disallowed characters", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
+    tags: [{ opening: "a", closing: ">" }],
+  })
+  assert.isFalse(result.success)
+})
+
+// 異なるペア間で重複する文字を含む tags は NormalizedOptionsSchema で拒否されることを確認する
+test("schema normalized feature options: rejects tags with duplicate characters across pairs", () => {
+  const result = NormalizedOptionsSchema.safeParse({
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "<", closing: "!" },
+    ],
   })
   assert.isFalse(result.success)
 })
