@@ -1,5 +1,5 @@
 import type { Token, TokenKind } from "./token.js"
-import type { DocumentNode, ElementNode, Decoration, JsonValue } from "./ast.js"
+import type { DocumentNode, ElementNode, Decoration, JsonValue, AttributeValue } from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions } from "./types.js"
 import { normalizeOptions } from "./types.js"
@@ -39,6 +39,15 @@ function isIdentChar(ch: string): boolean {
  */
 function isValidTagName(name: string): boolean {
   return /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)
+}
+
+/**
+ * 文字列が変数名として有効かどうかを判定する（[a-zA-Z][0-9a-zA-Z-]*）
+ * @param name - 判定対象の文字列（$を除いた部分）
+ * @returns 有効な変数名であればtrue
+ */
+function isValidVariableName(name: string): boolean {
+  return /^[a-zA-Z][0-9a-zA-Z-]*$/.test(name)
 }
 
 /**
@@ -169,12 +178,32 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は JSON 値として読む
+    // EQUALS の直後は JSON 値または変数参照として読む
     if (lastKind === "EQUALS") {
-      const start = pos
-      const [value, newPos] = readJsonValue(input, pos)
-      emit("JSON_VALUE", value, start)
-      pos = newPos
+      // 空白を読み飛ばす
+      while (pos < len && isWhitespace(input[pos])) pos++
+
+      if (pos < len && input[pos] === "$") {
+        const start = pos
+        pos++ // $ をスキップ
+        const nameStart = pos
+        while (pos < len && isIdentChar(input[pos])) pos++
+        const varName = input.slice(nameStart, pos)
+        if (!isValidVariableName(varName)) {
+          const invalidPart = varName.length > 0 ? varName : (pos < len ? input[pos] : "<eof>")
+          const actual = `$${invalidPart}`
+          tokenError(
+            `invalid variable: expected=<$[a-zA-Z][0-9a-zA-Z-]*>, actual=<${actual}>`,
+            start,
+          )
+        }
+        emit("VAR_VALUE", "$" + varName, start)
+      } else {
+        const start = pos
+        const [value, newPos] = readJsonValue(input, pos)
+        emit("JSON_VALUE", value, start)
+        pos = newPos
+      }
       continue
     }
 
@@ -315,7 +344,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
     // デコレーションと属性
     const decorations: Decoration[] = []
-    const attributes: Record<string, JsonValue> = {}
+    const attributes: Record<string, AttributeValue> = {}
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
@@ -332,17 +361,24 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
-        const jsonToken = expect("JSON_VALUE")
-        const parsed = decodeJsonString(jsonToken.value)
-        if (!parsed.success) {
-          const detail = parsed.error.issues[0]!.message
-          parseError(
-            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
-            jsonToken.position,
-          )
+        const valueToken = peek()
+        if (valueToken.kind === "VAR_VALUE") {
+          advance()
+          // VAR_VALUE トークンの値は "$varname" 形式なので、先頭の $ を除いた部分を変数名とする
+          attributes[attrName] = { $var: valueToken.value.slice(1) }
+        } else {
+          const jsonToken = expect("JSON_VALUE")
+          const parsed = decodeJsonString(jsonToken.value)
+          if (!parsed.success) {
+            const detail = parsed.error.issues[0]!.message
+            parseError(
+              `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+              jsonToken.position,
+            )
+          }
+          encodeJsonValue(parsed.data as JsonValue)
+          attributes[attrName] = parsed.data as JsonValue
         }
-        encodeJsonValue(parsed.data as JsonValue)
-        attributes[attrName] = parsed.data as JsonValue
       }
     }
 

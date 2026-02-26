@@ -236,3 +236,23 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
+
+// 変数参照属性を解析してVariableRefを返すことを確認する
+test("parser: parses variable attribute as VariableRef", () => {
+  const doc = ot.parse(ot.tokenize("<A ref=$myVar />"))
+  assert.deepStrictEqual(doc.children[0].attributes["ref"], { $var: "myVar" })
+})
+
+// ハイフンと数字を含む変数名を解析できることを確認する
+test("parser: parses variable with hyphen and digits", () => {
+  const doc = ot.parse(ot.tokenize("<A ref=$bar-1 />"))
+  assert.deepStrictEqual(doc.children[0].attributes["ref"], { $var: "bar-1" })
+})
+
+// JSON属性と変数参照属性を混在して解析できることを確認する
+test("parser: parses mixed json and variable attributes", () => {
+  const doc = ot.parse(ot.tokenize('<A level=42 ref=$myVar name="test" />'))
+  assert.equal(doc.children[0].attributes["level"], 42)
+  assert.deepStrictEqual(doc.children[0].attributes["ref"], { $var: "myVar" })
+  assert.equal(doc.children[0].attributes["name"], "test")
+})

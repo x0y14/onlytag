@@ -68,3 +68,13 @@ test("tokenizer error: invalid null literal fails", () => {
 test("tokenizer error: missing boundary after json value fails", () => {
   expectTokenizerErrorWithPosition('<A config={"k":1}next=2 />')
 })
+
+// 変数名が数字で始まる場合は失敗することを確認する
+test("tokenizer error: variable name starting with digit fails", () => {
+  expectTokenizerErrorWithPosition("<A ref=$1bad />")
+})
+
+// $のみで変数名がない場合は失敗することを確認する
+test("tokenizer error: bare dollar sign as attribute value fails", () => {
+  expectTokenizerErrorWithPosition("<A ref=$ />")
+})

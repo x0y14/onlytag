@@ -95,6 +95,7 @@ const tokenKindValues = [
   "DOT_IDENT",
   "EQUALS",
   "JSON_VALUE",
+  "VAR_VALUE",
   "EOF",
 ] as const
 

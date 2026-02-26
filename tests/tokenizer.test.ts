@@ -169,3 +169,28 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   const value = tokens.find((t) => t.kind === "JSON_VALUE")
   assert.equal(value!.value, '{"k":1}')
 })
+
+// 変数参照属性がVAR_VALUEトークンとして取得できることを確認する
+test("tokenizer: variable attribute emits VAR_VALUE token", () => {
+  const tokens = ot.tokenize("<A ref=$myVar />")
+  const varToken = tokens.find((t) => t.kind === "VAR_VALUE")
+  assert.equal(varToken!.value, "$myVar")
+})
+
+// 複数の変数参照属性を順に取得できることを確認する
+test("tokenizer: multiple variable attributes", () => {
+  const tokens = ot.tokenize("<A x=$foo y=$bar-1 />")
+  const varTokens = tokens.filter((t) => t.kind === "VAR_VALUE")
+  assert.equal(varTokens.length, 2)
+  assert.equal(varTokens[0].value, "$foo")
+  assert.equal(varTokens[1].value, "$bar-1")
+})
+
+// JSON属性と変数参照属性を混在できることを確認する
+test("tokenizer: mixed json and variable attributes", () => {
+  const tokens = ot.tokenize('<A level=42 ref=$myVar name="test" />')
+  const jsonTokens = tokens.filter((t) => t.kind === "JSON_VALUE").map((t) => t.value)
+  const varTokens = tokens.filter((t) => t.kind === "VAR_VALUE").map((t) => t.value)
+  assert.deepStrictEqual(jsonTokens, ["42", '"test"'])
+  assert.deepStrictEqual(varTokens, ["$myVar"])
+})
