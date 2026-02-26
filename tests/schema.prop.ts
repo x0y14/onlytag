@@ -5,6 +5,7 @@ import {
   DecorationSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
+  LogicArgSchema,
 } from "../src/ast.js"
 import { TokenSchema } from "../src/token.js"
 import { NormalizedOptionsSchema } from "../src/types.js"
@@ -243,4 +244,24 @@ test("schema normalized feature options: rejects non-boolean values", () => {
     allowAttributes: 1,
   })
   assert.isFalse(result.success)
+})
+
+// --- LogicArg関連 ---
+
+// JSON値はLogicArgとして受理されることを確認する（LogicArgSchemaのlazy評価を起動する）
+test("schema logic arg: accepts json value as logic arg", () => {
+  const result = LogicArgSchema.safeParse("hello")
+  assert.isTrue(result.success)
+})
+
+// InjectNodeはLogicArgとして受理されることを確認する
+test("schema logic arg: accepts inject node as logic arg", () => {
+  const result = LogicArgSchema.safeParse({ type: "inject", name: "mode" })
+  assert.isTrue(result.success)
+})
+
+// LogicNodeはLogicArgとして受理されることを確認する
+test("schema logic arg: accepts logic node as logic arg", () => {
+  const result = LogicArgSchema.safeParse({ type: "logic", name: "equal", args: [1, "dark"] })
+  assert.isTrue(result.success)
 })

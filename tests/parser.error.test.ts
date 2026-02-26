@@ -103,3 +103,68 @@ test("parser error: invalid json token payload fails in parse stage", () => {
   assert.match((error as Error).message, /invalid json attribute/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
+
+// allowLogic: false のパーサーに IDENT トークンが属性値位置に来た場合は失敗することを確認する
+test("parser error: ident in attribute value position with allowLogic false fails", () => {
+  const otNoLogic = new onlytag({ allowLogic: false })
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "v", position: 3 },
+    { kind: "EQUALS", value: "=", position: 4 },
+    { kind: "IDENT", value: "func", position: 5 },
+    { kind: "LPAREN", value: "(", position: 9 },
+    { kind: "RPAREN", value: ")", position: 10 },
+    { kind: "SLASH_GT", value: "/>", position: 11 },
+    { kind: "EOF", value: "", position: 13 },
+  ]
+
+  let error: unknown
+  try {
+    otNoLogic.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /logic is not allowed/i)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// 属性値位置に予期しないトークン種別が来た場合は失敗することを確認する
+test("parser error: unexpected token kind in attribute value position fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "v", position: 3 },
+    { kind: "EQUALS", value: "=", position: 4 },
+    { kind: "LPAREN", value: "(", position: 5 },
+    { kind: "RPAREN", value: ")", position: 6 },
+    { kind: "SLASH_GT", value: "/>", position: 7 },
+    { kind: "EOF", value: "", position: 9 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /unexpected token in attribute value/i)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// 閉じタグ名にアンダースコアを含む場合は失敗することを確認する
+test("parser error: closing tag name with underscore fails", () => {
+  expectParserErrorWithPosition("<A></A_b>")
+})
