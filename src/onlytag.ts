@@ -33,6 +33,15 @@ function isIdentChar(ch: string): boolean {
 }
 
 /**
+ * 文字列がタグ名として有効かどうかを判定する（[a-zA-Z][a-zA-Z0-9-]*）
+ * @param name - 判定対象の文字列
+ * @returns 有効なタグ名であればtrue
+ */
+function isValidTagName(name: string): boolean {
+  return /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)
+}
+
+/**
  * トークナイズ時のエラーを送出する
  * @param message - エラーメッセージ
  * @param position - エラーが発生した入力文字列中の位置
@@ -176,15 +185,18 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     const ch = input[pos]
 
     switch (ch) {
-      case "<":
-        if (pos + 1 < len && input[pos + 1] === "/") {
+      case "<": {
+        let ltLookAhead = pos + 1
+        while (ltLookAhead < len && isWhitespace(input[ltLookAhead])) ltLookAhead++
+        if (ltLookAhead < len && input[ltLookAhead] === "/") {
           emit("LT_SLASH", "</", start)
-          pos += 2
+          pos = ltLookAhead + 1
         } else {
           emit("LT", "<", start)
           pos += 1
         }
         break
+      }
 
       case ">":
         emit("GT", ">", start)
@@ -294,6 +306,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     expect("LT")
     const tagToken = expect("IDENT")
     const tagName = tagToken.value
+    if (!isValidTagName(tagName)) {
+      parseError(
+        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${tagName}>`,
+        tagToken.position,
+      )
+    }
 
     // デコレーションと属性
     const decorations: Decoration[] = []
@@ -356,6 +374,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
     expect("LT_SLASH")
     const closeTag = expect("IDENT")
+    if (!isValidTagName(closeTag.value)) {
+      parseError(
+        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${closeTag.value}>`,
+        closeTag.position,
+      )
+    }
     if (closeTag.value !== tagName) {
       parseError(
         `mismatched closing tag: expected=</${tagName}>, actual=</${closeTag.value}>`,

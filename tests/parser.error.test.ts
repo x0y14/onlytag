@@ -50,7 +50,15 @@ test("parser error: eof before closing tag fails", () => {
   expectParserErrorWithPosition("<A>")
 })
 
-// 属性名の直後に等号がない入力は失敗することを確認する
+// タグ名にアンダースコアを含む入力は失敗することを確認する
+test("parser error: tag name with underscore fails", () => {
+  expectParserErrorWithPosition("<A_b />")
+})
+
+// タグ名が数字で始まる入力は失敗することを確認する
+test("parser error: tag name starting with digit fails", () => {
+  expectParserErrorWithPosition("<1Tag />")
+})
 test("parser error: missing equals before decoration fails", () => {
   let error: unknown
   try {
