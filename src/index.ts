@@ -8,14 +8,12 @@ export {
 export { TokenKind, TokenSchema, type Token } from "./token.js"
 export {
   JsonValueSchema,
-  VariableRefSchema,
-  AttributeValueSchema,
+  VariableSchema,
   DecorationSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
   type JsonValue,
-  type VariableRef,
-  type AttributeValue,
+  type Variable,
   type Decoration,
   type ElementNode,
   type DocumentNode,

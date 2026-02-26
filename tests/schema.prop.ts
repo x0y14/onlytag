@@ -3,6 +3,7 @@ import * as fc from "fast-check"
 import {
   JsonValueSchema,
   DecorationSchema,
+  VariableSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
 } from "../src/ast.js"
@@ -84,6 +85,31 @@ test("schema decoration: rejects names with invalid chars", () => {
   )
 })
 
+// --- Variable関連 ---
+
+// 有効な変数名は常にバリデーション成功することを確認する
+test("schema variable: accepts valid names", () => {
+  const validVariableNameArb2 = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]*$/)
+  fc.assert(
+    fc.property(validVariableNameArb2, (name) => {
+      const result = VariableSchema.safeParse({ name })
+      assert.isTrue(result.success)
+    }),
+  )
+})
+
+// 空文字列の変数名はバリデーション失敗することを確認する
+test("schema variable: rejects empty name", () => {
+  const result = VariableSchema.safeParse({ name: "" })
+  assert.isFalse(result.success)
+})
+
+// 数字始まりの変数名はバリデーション失敗することを確認する
+test("schema variable: rejects name starting with digit", () => {
+  const result = VariableSchema.safeParse({ name: "1bad" })
+  assert.isFalse(result.success)
+})
+
 // --- Token関連 ---
 
 const tokenKindValues = [
@@ -95,7 +121,7 @@ const tokenKindValues = [
   "DOT_IDENT",
   "EQUALS",
   "JSON_VALUE",
-  "VAR_VALUE",
+  "DOLLAR_IDENT",
   "EOF",
 ] as const
 
@@ -157,11 +183,14 @@ const flatJsonValueArb = fc.oneof(
   fc.constant(null),
 )
 
+const validVariableNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]*$/)
+
 const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
   node: fc.record({
     type: fc.constant("element" as const),
     tagName: tagNameArb,
     decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
+    variables: fc.array(fc.record({ name: validVariableNameArb }), { maxLength: 3 }),
     attributes: fc.dictionary(fc.string(), flatJsonValueArb, { maxKeys: 3 }),
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
     selfClosing: fc.constant(false),
@@ -172,6 +201,7 @@ const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
   tagName: tagNameArb,
   decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
+  variables: fc.array(fc.record({ name: validVariableNameArb }), { maxLength: 3 }),
   attributes: fc.dictionary(fc.string(), flatJsonValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),
   selfClosing: fc.constant(true),

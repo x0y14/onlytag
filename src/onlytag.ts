@@ -1,5 +1,5 @@
 import type { Token, TokenKind } from "./token.js"
-import type { DocumentNode, ElementNode, Decoration, JsonValue, AttributeValue } from "./ast.js"
+import type { DocumentNode, ElementNode, Decoration, Variable, JsonValue } from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions } from "./types.js"
 import { normalizeOptions } from "./types.js"
@@ -39,15 +39,6 @@ function isIdentChar(ch: string): boolean {
  */
 function isValidTagName(name: string): boolean {
   return /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)
-}
-
-/**
- * 文字列が変数名として有効かどうかを判定する（[a-zA-Z][0-9a-zA-Z-]*）
- * @param name - 判定対象の文字列（$を除いた部分）
- * @returns 有効な変数名であればtrue
- */
-function isValidVariableName(name: string): boolean {
-  return /^[a-zA-Z][0-9a-zA-Z-]*$/.test(name)
 }
 
 /**
@@ -178,32 +169,12 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は JSON 値または変数参照として読む
+    // EQUALS の直後は JSON 値として読む
     if (lastKind === "EQUALS") {
-      // 空白を読み飛ばす
-      while (pos < len && isWhitespace(input[pos])) pos++
-
-      if (pos < len && input[pos] === "$") {
-        const start = pos
-        pos++ // $ をスキップ
-        const nameStart = pos
-        while (pos < len && isIdentChar(input[pos])) pos++
-        const varName = input.slice(nameStart, pos)
-        if (!isValidVariableName(varName)) {
-          const invalidPart = varName.length > 0 ? varName : (pos < len ? input[pos] : "<eof>")
-          const actual = `$${invalidPart}`
-          tokenError(
-            `invalid variable: expected=<$[a-zA-Z][0-9a-zA-Z-]*>, actual=<${actual}>`,
-            start,
-          )
-        }
-        emit("VAR_VALUE", "$" + varName, start)
-      } else {
-        const start = pos
-        const [value, newPos] = readJsonValue(input, pos)
-        emit("JSON_VALUE", value, start)
-        pos = newPos
-      }
+      const start = pos
+      const [value, newPos] = readJsonValue(input, pos)
+      emit("JSON_VALUE", value, start)
+      pos = newPos
       continue
     }
 
@@ -269,6 +240,26 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
           )
         }
         break
+
+      case "$": {
+        pos += 1
+        if (pos < len && /[a-zA-Z]/.test(input[pos])) {
+          // decoration と同様に、変数も allowDecorations で制御する
+          if (!options.allowDecorations) {
+            tokenError(`variables are not allowed: found variable at position`, start)
+          }
+          const identStart = pos
+          while (pos < len && isIdentChar(input[pos])) pos++
+          emit("DOLLAR_IDENT", "$" + input.slice(identStart, pos), start)
+        } else {
+          const actual = pos < len ? `$${input[pos]}` : "$<eof>"
+          tokenError(
+            `invalid variable token: expected=<$[a-zA-Z][a-zA-Z0-9-]*>, actual=<${actual}>`,
+            start,
+          )
+        }
+        break
+      }
 
       default:
         if (isIdentChar(ch)) {
@@ -342,10 +333,11 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       )
     }
 
-    // デコレーションと属性
+    // デコレーションと変数と属性
     const decorations: Decoration[] = []
-    const attributes: Record<string, AttributeValue> = {}
-    while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
+    const variables: Variable[] = []
+    const attributes: Record<string, JsonValue> = {}
+    while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT" || peek().kind === "DOLLAR_IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
           parseError(
@@ -355,30 +347,32 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         }
         const deco = advance()
         decorations.push({ name: deco.value.slice(1) })
+      } else if (peek().kind === "DOLLAR_IDENT") {
+        if (!options.allowDecorations) {
+          parseError(
+            `variables are not allowed: found variable "${peek().value}"`,
+            peek().position,
+          )
+        }
+        const varToken = advance()
+        variables.push({ name: varToken.value.slice(1) })
       } else {
         const attrName = advance().value
         if (!options.allowAttributes) {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
-        const valueToken = peek()
-        if (valueToken.kind === "VAR_VALUE") {
-          advance()
-          // VAR_VALUE トークンの値は "$varname" 形式なので、先頭の $ を除いた部分を変数名とする
-          attributes[attrName] = { $var: valueToken.value.slice(1) }
-        } else {
-          const jsonToken = expect("JSON_VALUE")
-          const parsed = decodeJsonString(jsonToken.value)
-          if (!parsed.success) {
-            const detail = parsed.error.issues[0]!.message
-            parseError(
-              `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
-              jsonToken.position,
-            )
-          }
-          encodeJsonValue(parsed.data as JsonValue)
-          attributes[attrName] = parsed.data as JsonValue
+        const jsonToken = expect("JSON_VALUE")
+        const parsed = decodeJsonString(jsonToken.value)
+        if (!parsed.success) {
+          const detail = parsed.error.issues[0]!.message
+          parseError(
+            `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+            jsonToken.position,
+          )
         }
+        encodeJsonValue(parsed.data as JsonValue)
+        attributes[attrName] = parsed.data as JsonValue
       }
     }
 
@@ -389,6 +383,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         type: "element",
         tagName,
         decorations,
+        variables,
         attributes,
         children: [],
         selfClosing: true,
@@ -428,6 +423,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       type: "element",
       tagName,
       decorations,
+      variables,
       attributes,
       children,
       selfClosing: false,

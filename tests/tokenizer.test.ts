@@ -170,27 +170,27 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   assert.equal(value!.value, '{"k":1}')
 })
 
-// 変数参照属性がVAR_VALUEトークンとして取得できることを確認する
-test("tokenizer: variable attribute emits VAR_VALUE token", () => {
-  const tokens = ot.tokenize("<A ref=$myVar />")
-  const varToken = tokens.find((t) => t.kind === "VAR_VALUE")
+// 変数がDOLLAR_IDENTトークンとして取得できることを確認する
+test("tokenizer: variable emits DOLLAR_IDENT token", () => {
+  const tokens = ot.tokenize("<A $myVar />")
+  const varToken = tokens.find((t) => t.kind === "DOLLAR_IDENT")
   assert.equal(varToken!.value, "$myVar")
 })
 
-// 複数の変数参照属性を順に取得できることを確認する
-test("tokenizer: multiple variable attributes", () => {
-  const tokens = ot.tokenize("<A x=$foo y=$bar-1 />")
-  const varTokens = tokens.filter((t) => t.kind === "VAR_VALUE")
+// 複数の変数を順に取得できることを確認する
+test("tokenizer: multiple variables", () => {
+  const tokens = ot.tokenize("<A $foo $bar-1 />")
+  const varTokens = tokens.filter((t) => t.kind === "DOLLAR_IDENT")
   assert.equal(varTokens.length, 2)
   assert.equal(varTokens[0].value, "$foo")
   assert.equal(varTokens[1].value, "$bar-1")
 })
 
-// JSON属性と変数参照属性を混在できることを確認する
-test("tokenizer: mixed json and variable attributes", () => {
-  const tokens = ot.tokenize('<A level=42 ref=$myVar name="test" />')
+// JSON属性と変数を混在できることを確認する
+test("tokenizer: mixed json attributes and variables", () => {
+  const tokens = ot.tokenize('<A level=42 $myVar name="test" />')
   const jsonTokens = tokens.filter((t) => t.kind === "JSON_VALUE").map((t) => t.value)
-  const varTokens = tokens.filter((t) => t.kind === "VAR_VALUE").map((t) => t.value)
+  const varTokens = tokens.filter((t) => t.kind === "DOLLAR_IDENT").map((t) => t.value)
   assert.deepStrictEqual(jsonTokens, ["42", '"test"'])
   assert.deepStrictEqual(varTokens, ["$myVar"])
 })

@@ -71,10 +71,10 @@ test("tokenizer error: missing boundary after json value fails", () => {
 
 // 変数名が数字で始まる場合は失敗することを確認する
 test("tokenizer error: variable name starting with digit fails", () => {
-  expectTokenizerErrorWithPosition("<A ref=$1bad />")
+  expectTokenizerErrorWithPosition("<A $1bad />")
 })
 
 // $のみで変数名がない場合は失敗することを確認する
-test("tokenizer error: bare dollar sign as attribute value fails", () => {
-  expectTokenizerErrorWithPosition("<A ref=$ />")
+test("tokenizer error: bare dollar sign fails", () => {
+  expectTokenizerErrorWithPosition("<A $ />")
 })

@@ -44,6 +44,7 @@ test("api contract: schemas accept minimal valid values", () => {
     type: "element",
     tagName: "A",
     decorations: [],
+    variables: [],
     attributes: {},
     children: [],
     selfClosing: true,
