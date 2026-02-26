@@ -236,3 +236,30 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
+
+// placeholder 属性を解析できることを確認する
+test("parser: parses placeholder attribute", () => {
+  const doc = ot.parse(ot.tokenize("<A attr=$myValue />"))
+  assert.deepStrictEqual(doc.children[0].attributes["attr"], {
+    type: "placeholder",
+    name: "myValue",
+  })
+})
+
+// placeholder 名にハイフンを含む場合も解析できることを確認する
+test("parser: parses placeholder with hyphen in name", () => {
+  const doc = ot.parse(ot.tokenize("<A x=$my-value-123 />"))
+  assert.deepStrictEqual(doc.children[0].attributes["x"], {
+    type: "placeholder",
+    name: "my-value-123",
+  })
+})
+
+// JSON 値と placeholder が混在する属性を解析できることを確認する
+test("parser: parses mixed json and placeholder attributes", () => {
+  const doc = ot.parse(ot.tokenize("<A .deco json={} ph=$abc />"))
+  const node = doc.children[0]
+  assert.deepStrictEqual(node.attributes["json"], {})
+  assert.deepStrictEqual(node.attributes["ph"], { type: "placeholder", name: "abc" })
+  assert.equal(node.decorations[0].name, "deco")
+})

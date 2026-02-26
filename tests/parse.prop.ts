@@ -12,6 +12,7 @@ const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/)
 const tagNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
 const safeIdentArb = identArb.filter((value) => value !== "__proto__")
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
+const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
 function hasProtoKey(value: unknown): boolean {
   if (Array.isArray(value)) return value.some((item) => hasProtoKey(item))
   if (value !== null && typeof value === "object") {
@@ -25,6 +26,7 @@ const safeJsonValueArb = fc.jsonValue().filter((value) => !hasProtoKey(value))
 const headerPartArb = fc.oneof(
   identArb.map((deco) => ({ text: `.${deco}` })),
   fc.tuple(identArb, jsonLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
+  fc.tuple(identArb, placeholderNameArb).map(([name, phName]) => ({ text: `${name}=$${phName}` })),
 )
 const mixedHeaderPartArb = fc.oneof(
   safeIdentArb.map((name) => ({ kind: "deco" as const, name })),
@@ -32,6 +34,11 @@ const mixedHeaderPartArb = fc.oneof(
     kind: "attr" as const,
     name,
     value,
+  })),
+  fc.tuple(safeIdentArb, placeholderNameArb).map(([name, phName]) => ({
+    kind: "placeholder" as const,
+    name,
+    phName,
   })),
 )
 
@@ -101,7 +108,7 @@ test("parse property: arbitrary input succeeds or fails with position hint", () 
   )
 })
 
-// attr/decoが任意個・任意順で出現しても正しくパースできることを確認する
+// attr/deco/placeholderが任意個・任意順で出現しても正しくパースできることを確認する
 test("parse property: random attr and deco order is parsed correctly", () => {
   fc.assert(
     fc.property(
@@ -111,9 +118,11 @@ test("parse property: random attr and deco order is parsed correctly", () => {
       }),
       ({ tag, parts }) => {
         const input = `<${tag} ${parts
-          .map((part) =>
-            part.kind === "deco" ? `.${part.name}` : `${part.name}=${JSON.stringify(part.value)}`,
-          )
+          .map((part) => {
+            if (part.kind === "deco") return `.${part.name}`
+            if (part.kind === "placeholder") return `${part.name}=$${part.phName}`
+            return `${part.name}=${JSON.stringify(part.value)}`
+          })
           .join(" ")} />`
         const doc = ot.parse(ot.tokenize(input))
         assert.equal(doc.children.length, 1)
@@ -125,6 +134,8 @@ test("parse property: random attr and deco order is parsed correctly", () => {
         for (const part of parts) {
           if (part.kind === "attr") {
             expectedAttributes[part.name] = JSON.parse(JSON.stringify(part.value))
+          } else if (part.kind === "placeholder") {
+            expectedAttributes[part.name] = { type: "placeholder", name: part.phName }
           }
         }
         assert.deepStrictEqual(doc.children[0].attributes, expectedAttributes)

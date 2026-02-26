@@ -9,10 +9,14 @@ export { TokenKind, TokenSchema, type Token } from "./token.js"
 export {
   JsonValueSchema,
   DecorationSchema,
+  PlaceholderSchema,
+  AttributeValueSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
   type JsonValue,
   type Decoration,
+  type Placeholder,
+  type AttributeValue,
   type ElementNode,
   type DocumentNode,
 } from "./ast.js"

@@ -55,6 +55,11 @@ test("parser error: tag name with underscore fails", () => {
   expectParserErrorWithPosition("<A_b />")
 })
 
+// 閉じタグ名にアンダースコアを含む入力は失敗することを確認する
+test("parser error: closing tag name with underscore fails", () => {
+  expectParserErrorWithPosition("<A></A_b>")
+})
+
 // タグ名が数字で始まる入力は失敗することを確認する
 test("parser error: tag name starting with digit fails", () => {
   expectParserErrorWithPosition("<1Tag />")
