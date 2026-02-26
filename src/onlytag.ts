@@ -37,15 +37,7 @@ function isIdentChar(ch: string): boolean {
  * @returns 有効なタグ名であればtrue
  */
 function isValidTagName(name: string): boolean {
-  if (name.length === 0) return false
-  const first = name.charCodeAt(0)
-  if (!((first >= 65 && first <= 90) || (first >= 97 && first <= 122))) return false
-  for (let i = 1; i < name.length; i++) {
-    const c = name.charCodeAt(i)
-    if (!((c >= 65 && c <= 90) || (c >= 97 && c <= 122) || (c >= 48 && c <= 57) || c === 45))
-      return false
-  }
-  return true
+  return /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)
 }
 
 /**
