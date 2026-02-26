@@ -191,3 +191,19 @@ test("normalizeOptions: 制御文字を opening に使うとエラー", () => {
 test("normalizeOptions: DEL を closing に使うとエラー", () => {
   assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "\x7f" }] }), /invalid closing delimiter/)
 })
+
+// 重複する opening デリミタはエラーになることを確認する
+test("normalizeOptions: 重複する opening デリミタはエラー", () => {
+  assert.throws(
+    () => normalizeOptions({ tags: [{ opening: "<", closing: ">" }, { opening: "<", closing: "|" }] }),
+    /duplicate opening delimiter/,
+  )
+})
+
+// normalizeOptions の結果を変更しても DEFAULT_TAGS に影響しないことを確認する
+test("normalizeOptions: 返り値の変更がデフォルトに影響しない", () => {
+  const result1 = normalizeOptions(undefined)
+  result1.tags[0].opening = "!"
+  const result2 = normalizeOptions(undefined)
+  assert.equal(result2.tags[0].opening, "<")
+})

@@ -76,10 +76,11 @@ const DEFAULT_TAGS: TagConfig[] = [{ opening: "<", closing: ">" }]
  * Options を正規化する。未指定フィールドはデフォルト値で補完し、タグデリミタを検証する
  * @param options - 正規化前のオプション。undefined の場合は全て許可
  * @returns 全フィールドが確定した NormalizedOptions
- * @throws {Error} タグデリミタに予約済み文字が使われている場合
+ * @throws {Error} タグデリミタに予約済み文字が使われている場合、または重複 opening がある場合
  */
 export function normalizeOptions(options?: Options): NormalizedOptions {
-  const tags = options?.tags ?? DEFAULT_TAGS
+  const tags = (options?.tags ?? DEFAULT_TAGS).map((t) => ({ ...t }))
+  const seenOpenings = new Set<string>()
   for (const tag of tags) {
     if (isReservedDelimChar(tag.opening)) {
       throw new Error(`invalid opening delimiter: "${tag.opening}"`)
@@ -87,6 +88,10 @@ export function normalizeOptions(options?: Options): NormalizedOptions {
     if (isReservedDelimChar(tag.closing)) {
       throw new Error(`invalid closing delimiter: "${tag.closing}"`)
     }
+    if (seenOpenings.has(tag.opening)) {
+      throw new Error(`duplicate opening delimiter in tags option: "${tag.opening}"`)
+    }
+    seenOpenings.add(tag.opening)
   }
   return {
     allowDecorations: options?.allowDecorations ?? true,

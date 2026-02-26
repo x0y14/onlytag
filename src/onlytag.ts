@@ -129,7 +129,10 @@ function readJsonValue(
   }
 
   if (isJsonBoundary(input, pos, closingChars)) {
-    const actual = input[pos] === "/" ? "/>" : input[pos]
+    const actual =
+      input[pos] === "/" && pos + 1 < len && closingChars.has(input[pos + 1])
+        ? `/${input[pos + 1]}`
+        : input[pos]
     tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos)
   }
 
