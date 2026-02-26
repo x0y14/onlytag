@@ -74,6 +74,21 @@ Output: `parse()`
 }
 ```
 
+### Serialization (AST ↔ JSON)
+
+```ts
+import { onlytag } from "onlytag"
+
+const ot = new onlytag()
+
+// AST を JSON 文字列にシリアライズ
+const ast = ot.parse(ot.tokenize(`<Button .primary text="Click me" />`))
+const json = ot.dump(ast)
+
+// JSON 文字列から AST を復元
+const loaded = ot.load(json)
+```
+
 ## Examples
 
 ```txt
