@@ -229,7 +229,8 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
       if (!options.allowInject) {
         tokenError(`inject is not allowed: found inject at position`, pos)
       }
-      const start = pos++
+      const start = pos
+      pos++
       const identStart = pos
       while (pos < len && isIdentChar(input[pos])) pos++
       if (pos === identStart) {
@@ -493,7 +494,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       const jsonToken = advance()
       const parsed = decodeJsonString(jsonToken.value)
       if (!parsed.success) {
-        const detail = parsed.error.issues[0]!.message
+        const detail = parsed.error.issues[0]?.message ?? "invalid json"
         parseError(
           `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, detail=<${detail}>`,
           jsonToken.position,
