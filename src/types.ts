@@ -82,16 +82,16 @@ export function normalizeOptions(options?: Options): NormalizedOptions {
   const tags = (options?.tags ?? DEFAULT_TAGS).map((t) => ({ ...t }))
   const seenOpenings = new Set<string>()
   for (const tag of tags) {
+    if (seenOpenings.has(tag.opening)) {
+      throw new Error(`duplicate opening delimiter in tags option: "${tag.opening}"`)
+    }
+    seenOpenings.add(tag.opening)
     if (isReservedDelimChar(tag.opening)) {
       throw new Error(`invalid opening delimiter: "${tag.opening}"`)
     }
     if (isReservedDelimChar(tag.closing)) {
       throw new Error(`invalid closing delimiter: "${tag.closing}"`)
     }
-    if (seenOpenings.has(tag.opening)) {
-      throw new Error(`duplicate opening delimiter in tags option: "${tag.opening}"`)
-    }
-    seenOpenings.add(tag.opening)
   }
   return {
     allowDecorations: options?.allowDecorations ?? true,
