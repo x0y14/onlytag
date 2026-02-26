@@ -7,6 +7,7 @@ test("normalizeOptions: undefined はデフォルト値を返す", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
+    tags: [{ opening: "<", closing: ">" }],
   })
 })
 
@@ -16,6 +17,7 @@ test("normalizeOptions: 空オブジェクトはデフォルト値を返す", ()
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
+    tags: [{ opening: "<", closing: ">" }],
   })
 })
 
@@ -25,6 +27,7 @@ test("normalizeOptions: allowDecorations のみ指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: false,
     allowAttributes: true,
+    tags: [{ opening: "<", closing: ">" }],
   })
 })
 
@@ -34,6 +37,7 @@ test("normalizeOptions: allowAttributes のみ指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: false,
+    tags: [{ opening: "<", closing: ">" }],
   })
 })
 
@@ -46,6 +50,7 @@ test("normalizeOptions: 両方 false を指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: false,
     allowAttributes: false,
+    tags: [{ opening: "<", closing: ">" }],
   })
 })
 
@@ -58,5 +63,56 @@ test("normalizeOptions: 両方 true を明示指定", () => {
   assert.deepStrictEqual(result, {
     allowDecorations: true,
     allowAttributes: true,
+    tags: [{ opening: "<", closing: ">" }],
   })
+})
+
+// カスタムタグデリミタを指定した場合の正規化を確認する
+test("normalizeOptions: カスタムタグデリミタを指定", () => {
+  const result = normalizeOptions({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "|", closing: "|" },
+    ],
+  })
+  assert.deepStrictEqual(result.tags, [
+    { opening: "<", closing: ">" },
+    { opening: "|", closing: "|" },
+  ])
+})
+
+// 空のタグリストを指定した場合の正規化を確認する
+test("normalizeOptions: 空のタグリストを指定", () => {
+  const result = normalizeOptions({ tags: [] })
+  assert.deepStrictEqual(result.tags, [])
+})
+
+// 予約済み文字（英字）を opening に使うとエラーになることを確認する
+test("normalizeOptions: 予約済み文字を opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "a", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 予約済み文字（英字）を closing に使うとエラーになることを確認する
+test("normalizeOptions: 予約済み文字を closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "z" }] }), /invalid closing delimiter/)
+})
+
+// 予約済み文字（ドット）を opening に使うとエラーになることを確認する
+test("normalizeOptions: ドットを opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: ".", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 予約済み文字（イコール）を closing に使うとエラーになることを確認する
+test("normalizeOptions: イコールを closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: "=" }] }), /invalid closing delimiter/)
+})
+
+// 予約済み文字（スラッシュ）を opening に使うとエラーになることを確認する
+test("normalizeOptions: スラッシュを opening に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "/", closing: ">" }] }), /invalid opening delimiter/)
+})
+
+// 空白文字を closing に使うとエラーになることを確認する
+test("normalizeOptions: 空白文字を closing に使うとエラー", () => {
+  assert.throws(() => normalizeOptions({ tags: [{ opening: "<", closing: " " }] }), /invalid closing delimiter/)
 })

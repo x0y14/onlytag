@@ -236,3 +236,49 @@ test("parser: parses json attribute immediately followed by slash-gt", () => {
   assert.equal(doc.children.length, 1)
   assert.deepStrictEqual(doc.children[0].attributes["config"], { k: 1 })
 })
+
+// パイプデリミタで自己閉じタグを解析できることを確認する
+test("parser: pipe delimiter parses self-closing tag", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const doc = otPipe.parse(otPipe.tokenize("|Br /|"))
+  assert.equal(doc.children.length, 1)
+  assert.equal(doc.children[0].tagName, "Br")
+  assert.equal(doc.children[0].selfClosing, true)
+})
+
+// パイプデリミタで開閉タグペアを解析できることを確認する
+test("parser: pipe delimiter parses open-close pair", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const doc = otPipe.parse(otPipe.tokenize("|Div||/Div|"))
+  assert.equal(doc.children.length, 1)
+  assert.equal(doc.children[0].tagName, "Div")
+  assert.equal(doc.children[0].selfClosing, false)
+})
+
+// パイプデリミタでデコレーションと属性を解析できることを確認する
+test("parser: pipe delimiter parses decorations and attributes", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const doc = otPipe.parse(otPipe.tokenize('|Card .primary label="new" /|'))
+  const card = doc.children[0]
+  assert.equal(card.tagName, "Card")
+  assert.equal(card.decorations[0].name, "primary")
+  assert.equal(card.attributes["label"], "new")
+})
+
+// 複数タグ設定でイシューの例を解析できることを確認する
+test("parser: multiple tag configs parse issue example", () => {
+  const otMulti = new onlytag({
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "|", closing: "|" },
+      { opening: "%", closing: "%" },
+    ],
+  })
+  const doc = otMulti.parse(
+    otMulti.tokenize('<tag></tag>|tag .deco attr=1 /|% tag .deco attr=1 /%'),
+  )
+  assert.equal(doc.children.length, 3)
+  assert.equal(doc.children[0].tagName, "tag")
+  assert.equal(doc.children[1].tagName, "tag")
+  assert.equal(doc.children[2].tagName, "tag")
+})

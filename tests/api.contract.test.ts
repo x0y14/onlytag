@@ -65,6 +65,7 @@ test("api contract: exports onlytag class", () => {
 test("api contract: exports feature options utilities", () => {
   assert.isFunction(onlytagModule.normalizeOptions)
   assert.isDefined(onlytagModule.NormalizedOptionsSchema)
+  assert.isDefined(onlytagModule.TagConfigSchema)
 })
 
 // 部分指定でインスタンス生成可能なことを確認する

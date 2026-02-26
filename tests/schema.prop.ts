@@ -222,6 +222,7 @@ test("schema normalized feature options: accepts valid options", () => {
       const result = NormalizedOptionsSchema.safeParse({
         allowDecorations,
         allowAttributes,
+        tags: [{ opening: "<", closing: ">" }],
       })
       assert.isTrue(result.success)
     }),

@@ -1,7 +1,9 @@
 export { onlytag } from "./onlytag.js"
 export {
+  type TagConfig,
   type Options,
   type NormalizedOptions,
+  TagConfigSchema,
   NormalizedOptionsSchema,
   normalizeOptions,
 } from "./types.js"

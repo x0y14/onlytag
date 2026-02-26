@@ -55,14 +55,15 @@ function tokenError(message: string, position: number): never {
  * 指定位置がJSON値の境界（空白・タグ閉じ・入力末尾）かどうかを判定する
  * @param input - 入力文字列全体
  * @param end - 判定対象の位置
+ * @param closingChars - 終了デリミタ文字の集合
  * @returns 境界であればtrue
  */
-function isJsonBoundary(input: string, end: number): boolean {
+function isJsonBoundary(input: string, end: number, closingChars: Set<string>): boolean {
   const len = input.length
   if (end >= len) return true
   const ch = input[end]
-  if (isWhitespace(ch) || ch === ">") return true
-  if (ch === "/" && end + 1 < len && input[end + 1] === ">") return true
+  if (isWhitespace(ch) || closingChars.has(ch)) return true
+  if (ch === "/" && end + 1 < len && closingChars.has(input[end + 1])) return true
   return false
 }
 
@@ -88,14 +89,15 @@ function canStartJsonValue(ch: string): boolean {
  * エラーメッセージ用に、不正なリテラルのプレビュー文字列を取得する
  * @param input - 入力文字列全体
  * @param pos - プレビュー開始位置
+ * @param delimChars - 区切り文字の集合（開始・終了デリミタの両方を含む）
  * @returns プレビュー文字列。入力末尾の場合は`"<eof>"`
  */
-function readLiteralPreview(input: string, pos: number): string {
+function readLiteralPreview(input: string, pos: number, delimChars: Set<string>): string {
   const len = input.length
   let i = pos
   while (i < len) {
     const ch = input[i]
-    if (isWhitespace(ch) || ch === "<" || ch === ">" || ch === "/" || ch === "=") break
+    if (isWhitespace(ch) || delimChars.has(ch) || ch === "/" || ch === "=") break
     i++
   }
   if (i === pos) return "<eof>"
@@ -106,10 +108,17 @@ function readLiteralPreview(input: string, pos: number): string {
  * 入力文字列からJSON値を読み取る。境界位置まで貪欲にマッチを試みる
  * @param input - 入力文字列全体
  * @param pos - 読み取り開始位置
+ * @param closingChars - 終了デリミタ文字の集合
+ * @param delimChars - 全区切り文字の集合（エラーメッセージ用）
  * @returns JSON値の生文字列と読み取り後の位置のタプル
  * @throws {Error} JSON値が見つからない、または不正な場合
  */
-function readJsonValue(input: string, pos: number): [value: string, newPos: number] {
+function readJsonValue(
+  input: string,
+  pos: number,
+  closingChars: Set<string>,
+  delimChars: Set<string>,
+): [value: string, newPos: number] {
   const len = input.length
 
   // 属性値の前にある空白を読み飛ばす
@@ -119,7 +128,7 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
     tokenError("missing attribute value: expected=<json-value>, actual=<eof>", pos)
   }
 
-  if (isJsonBoundary(input, pos)) {
+  if (isJsonBoundary(input, pos, closingChars)) {
     const actual = input[pos] === "/" ? "/>" : input[pos]
     tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos)
   }
@@ -130,7 +139,7 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
 
   let lastDecodeIssue = "invalid json"
   for (let end = pos + 1; end <= len; end++) {
-    if (!isJsonBoundary(input, end)) continue
+    if (!isJsonBoundary(input, end, closingChars)) continue
     const candidate = input.slice(pos, end)
     const result = decodeJsonString(candidate)
     if (result.success) {
@@ -140,7 +149,7 @@ function readJsonValue(input: string, pos: number): [value: string, newPos: numb
   }
 
   tokenError(
-    `invalid json attribute value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos)}>, detail=<${lastDecodeIssue}>`,
+    `invalid json attribute value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos, delimChars)}>, detail=<${lastDecodeIssue}>`,
     pos,
   )
 }
@@ -160,6 +169,10 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
   let pos = 0
   let lastKind: TokenKind | null = null
 
+  const openingChars = new Set(options.tags.map((t) => t.opening))
+  const closingChars = new Set(options.tags.map((t) => t.closing))
+  const delimChars = new Set([...openingChars, ...closingChars])
+
   function emit(kind: TokenKind, value: string, position: number) {
     tokens.push({ kind, value, position })
     lastKind = kind
@@ -172,7 +185,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // EQUALS の直後は JSON 値として読む
     if (lastKind === "EQUALS") {
       const start = pos
-      const [value, newPos] = readJsonValue(input, pos)
+      const [value, newPos] = readJsonValue(input, pos, closingChars, delimChars)
       emit("JSON_VALUE", value, start)
       pos = newPos
       continue
@@ -184,74 +197,60 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
 
     const ch = input[pos]
 
-    switch (ch) {
-      case "<": {
-        let ltLookAhead = pos + 1
-        while (ltLookAhead < len && isWhitespace(input[ltLookAhead])) ltLookAhead++
-        if (ltLookAhead < len && input[ltLookAhead] === "/") {
-          emit("LT_SLASH", "</", start)
-          pos = ltLookAhead + 1
-        } else {
-          emit("LT", "<", start)
-          pos += 1
-        }
-        break
+    // タグヘッダ内かどうか（lastKind で判定）
+    const insideTag = lastKind !== null && lastKind !== "GT" && lastKind !== "SLASH_GT"
+
+    if (insideTag && ch === "/" && pos + 1 < len && closingChars.has(input[pos + 1])) {
+      // 自己閉じ: /closingChar
+      emit("SLASH_GT", ch + input[pos + 1], start)
+      pos += 2
+    } else if (insideTag && closingChars.has(ch)) {
+      // タグ閉じ
+      emit("GT", ch, start)
+      pos += 1
+    } else if (!insideTag && openingChars.has(ch)) {
+      // タグ開き: openingChar または openingChar/
+      let ltLookAhead = pos + 1
+      while (ltLookAhead < len && isWhitespace(input[ltLookAhead])) ltLookAhead++
+      if (ltLookAhead < len && input[ltLookAhead] === "/") {
+        emit("LT_SLASH", ch + "/", start)
+        pos = ltLookAhead + 1
+      } else {
+        emit("LT", ch, start)
+        pos += 1
       }
-
-      case ">":
-        emit("GT", ">", start)
-        pos += 1
-        break
-
-      case "/":
-        if (pos + 1 < len && input[pos + 1] === ">") {
-          emit("SLASH_GT", "/>", start)
-          pos += 2
-        } else {
-          const next = pos + 1 < len ? input[pos + 1] : "<eof>"
-          tokenError(`invalid slash token: expected=</>, actual=</${next}>`, pos)
+    } else if (ch === "=") {
+      // attribute が禁止されている場合は即座にエラー
+      if (!options.allowAttributes) {
+        tokenError(`attributes are not allowed: found attribute at position`, start)
+      }
+      emit("EQUALS", "=", start)
+      pos += 1
+    } else if (ch === ".") {
+      pos += 1
+      if (pos < len && isIdentChar(input[pos])) {
+        // decoration が禁止されている場合は即座にエラー
+        if (!options.allowDecorations) {
+          tokenError(`decorations are not allowed: found decoration at position`, start)
         }
-        break
-
-      case "=":
-        // attribute が禁止されている場合は即座にエラー
-        if (!options.allowAttributes) {
-          tokenError(`attributes are not allowed: found attribute at position`, start)
-        }
-        emit("EQUALS", "=", start)
-        pos += 1
-        break
-
-      case ".":
-        pos += 1
-        if (pos < len && isIdentChar(input[pos])) {
-          // decoration が禁止されている場合は即座にエラー
-          if (!options.allowDecorations) {
-            tokenError(`decorations are not allowed: found decoration at position`, start)
-          }
-          const identStart = pos
-          while (pos < len && isIdentChar(input[pos])) pos++
-          emit("DOT_IDENT", "." + input.slice(identStart, pos), start)
-        } else {
-          const actual = pos < len ? `.${input[pos]}` : ".<eof>"
-          tokenError(
-            `invalid decoration token: expected=<.[A-Za-z0-9_-]+>, actual=<${actual}>`,
-            start,
-          )
-        }
-        break
-
-      default:
-        if (isIdentChar(ch)) {
-          while (pos < len && isIdentChar(input[pos])) pos++
-          emit("IDENT", input.slice(start, pos), start)
-        } else {
-          tokenError(
-            `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
-            pos,
-          )
-        }
-        break
+        const identStart = pos
+        while (pos < len && isIdentChar(input[pos])) pos++
+        emit("DOT_IDENT", "." + input.slice(identStart, pos), start)
+      } else {
+        const actual = pos < len ? `.${input[pos]}` : ".<eof>"
+        tokenError(
+          `invalid decoration token: expected=<.[A-Za-z0-9_-]+>, actual=<${actual}>`,
+          start,
+        )
+      }
+    } else if (isIdentChar(ch)) {
+      while (pos < len && isIdentChar(input[pos])) pos++
+      emit("IDENT", input.slice(start, pos), start)
+    } else {
+      tokenError(
+        `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
+        pos,
+      )
     }
   }
 
@@ -283,6 +282,9 @@ function parseError(message: string, position: number): never {
 function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   const cursor = { value: 0 }
 
+  // 開始デリミタ → 終了デリミタのマップ
+  const closingForOpening = new Map(options.tags.map((t) => [t.opening, t.closing]))
+
   function peek(): Token {
     return tokens[cursor.value]
   }
@@ -303,7 +305,10 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   }
 
   function parseElement(): ElementNode {
-    expect("LT")
+    const ltToken = expect("LT")
+    const openingChar = ltToken.value
+    const expectedClosing = closingForOpening.get(openingChar) ?? openingChar
+
     const tagToken = expect("IDENT")
     const tagName = tagToken.value
     if (!isValidTagName(tagName)) {
@@ -348,6 +353,14 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
 
     // 自己閉じ
     if (peek().kind === "SLASH_GT") {
+      const slashGtTok = peek()
+      const actualClosing = slashGtTok.value[1]
+      if (actualClosing !== expectedClosing) {
+        parseError(
+          `mismatched tag delimiter: opening="${openingChar}", expected closing="${expectedClosing}", actual="${slashGtTok.value}"`,
+          slashGtTok.position,
+        )
+      }
       advance()
       return {
         type: "element",
@@ -359,6 +372,13 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       }
     }
 
+    const gtTok = peek()
+    if (gtTok.kind === "GT" && gtTok.value !== expectedClosing) {
+      parseError(
+        `mismatched tag delimiter: opening="${openingChar}", expected closing="${expectedClosing}", actual="${gtTok.value}"`,
+        gtTok.position,
+      )
+    }
     expect("GT")
 
     // 子要素
@@ -372,6 +392,13 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       parseError(`missing closing tag: expected=</${tagName}>, actual=<eof>`, peek().position)
     }
 
+    const ltSlashTok = peek()
+    if (ltSlashTok.kind === "LT_SLASH" && ltSlashTok.value[0] !== openingChar) {
+      parseError(
+        `mismatched closing tag delimiter: opening="${openingChar}", actual="${ltSlashTok.value}"`,
+        ltSlashTok.position,
+      )
+    }
     expect("LT_SLASH")
     const closeTag = expect("IDENT")
     if (!isValidTagName(closeTag.value)) {
@@ -384,6 +411,13 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       parseError(
         `mismatched closing tag: expected=</${tagName}>, actual=</${closeTag.value}>`,
         closeTag.position,
+      )
+    }
+    const finalGtTok = peek()
+    if (finalGtTok.kind === "GT" && finalGtTok.value !== expectedClosing) {
+      parseError(
+        `mismatched tag delimiter: opening="${openingChar}", expected closing="${expectedClosing}", actual="${finalGtTok.value}"`,
+        finalGtTok.position,
       )
     }
     expect("GT")

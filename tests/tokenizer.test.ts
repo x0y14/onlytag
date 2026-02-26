@@ -169,3 +169,60 @@ test("tokenizer: detects json boundary before slash-gt", () => {
   const value = tokens.find((t) => t.kind === "JSON_VALUE")
   assert.equal(value!.value, '{"k":1}')
 })
+
+// パイプデリミタ（|）で開閉タグをトークン化できることを確認する
+test("tokenizer: pipe delimiter tokenizes open and close tag", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const tokens = otPipe.tokenize("|A||/A|")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "GT", "LT_SLASH", "IDENT", "GT", "EOF"])
+})
+
+// パイプデリミタで自己閉じタグをトークン化できることを確認する
+test("tokenizer: pipe delimiter tokenizes self-closing tag", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const tokens = otPipe.tokenize("|A /|")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "SLASH_GT", "EOF"])
+})
+
+// パイプデリミタでデコレーションと属性をトークン化できることを確認する
+test("tokenizer: pipe delimiter tokenizes decoration and attribute", () => {
+  const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+  const tokens = otPipe.tokenize('|A .bold text="hello" /|')
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "DOT_IDENT",
+    "IDENT",
+    "EQUALS",
+    "JSON_VALUE",
+    "SLASH_GT",
+    "EOF",
+  ])
+})
+
+// 複数タグ設定（<> と ||）を混在させてトークン化できることを確認する
+test("tokenizer: multiple tag configs tokenize mixed syntax", () => {
+  const otMulti = new onlytag({ tags: [{ opening: "<", closing: ">" }, { opening: "|", closing: "|" }] })
+  const tokens = otMulti.tokenize("<A /><B />|C /||D /|")
+  const idents = tokens.filter((t) => t.kind === "IDENT").map((t) => t.value)
+  assert.deepStrictEqual(idents, ["A", "B", "C", "D"])
+})
+
+// パーセントデリミタ（%）で開閉タグをトークン化できることを確認する
+test("tokenizer: percent delimiter tokenizes open and close tag", () => {
+  const otPct = new onlytag({ tags: [{ opening: "%", closing: "%" }] })
+  const tokens = otPct.tokenize("%A%%/A%")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "GT", "LT_SLASH", "IDENT", "GT", "EOF"])
+})
+
+// 非対称デリミタ（{ と }）で自己閉じタグをトークン化できることを確認する
+test("tokenizer: asymmetric delimiters tokenize self-closing tag", () => {
+  const otBraces = new onlytag({ tags: [{ opening: "{", closing: "}" }] })
+  const tokens = otBraces.tokenize("{A /}")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "SLASH_GT", "EOF"])
+})
