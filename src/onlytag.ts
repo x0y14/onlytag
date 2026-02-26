@@ -382,8 +382,27 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
             )
           }
           const phToken = advance()
-          // ドル記号を除去して placeholder 名を取得する
-          const name = phToken.value.slice(1)
+          const raw = phToken.value
+          // validate placeholder token format: must start with "$" and have a valid name
+          if (!raw.startsWith("$")) {
+            parseError(
+              `invalid placeholder: expected to start with "$", actual="${raw}"`,
+              phToken.position,
+            )
+          }
+          const name = raw.slice(1)
+          if (name.length === 0) {
+            parseError(
+              `invalid placeholder: name is empty in "${raw}"`,
+              phToken.position,
+            )
+          }
+          if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+            parseError(
+              `invalid placeholder: name "${name}" contains invalid characters`,
+              phToken.position,
+            )
+          }
           const placeholder: Placeholder = { type: "placeholder", name }
           attributes[attrName] = placeholder
         } else {
