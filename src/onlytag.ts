@@ -12,6 +12,15 @@ import type { Options, NormalizedOptions } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 
+/** タグ名のバリデーションパターン */
+const TAG_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+/** プレースホルダー先頭文字のバリデーションパターン */
+const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
+/** プレースホルダー後続文字のバリデーションパターン */
+const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9-]/
+/** プレースホルダー名のバリデーションパターン */
+const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+
 // --- tokenize 内部ヘルパー ---
 
 /**
@@ -45,7 +54,7 @@ function isIdentChar(ch: string): boolean {
  * @returns 有効なタグ名であればtrue
  */
 function isValidTagName(name: string): boolean {
-  return /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)
+  return TAG_NAME_PATTERN.test(name)
 }
 
 /**
@@ -165,12 +174,12 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
   const start = pos
   pos++ // $ をスキップ
 
-  if (pos >= len || !/[a-zA-Z]/.test(input[pos])) {
+  if (pos >= len || !PLACEHOLDER_FIRST_CHAR_PATTERN.test(input[pos])) {
     const actual = pos < len ? input[pos] : "<eof>"
     tokenError(`invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9-]*>, actual=<$${actual}>`, start)
   }
 
-  while (pos < len && /[a-zA-Z0-9-]/.test(input[pos])) pos++
+  while (pos < len && PLACEHOLDER_CHAR_PATTERN.test(input[pos])) pos++
 
   return [input.slice(start, pos), pos]
 }
@@ -397,7 +406,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
               phToken.position,
             )
           }
-          if (!/^[a-zA-Z][a-zA-Z0-9-]*$/.test(name)) {
+          if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
             parseError(
               `invalid placeholder: name "${name}" contains invalid characters`,
               phToken.position,
