@@ -4,6 +4,7 @@ import {
   JsonValueSchema,
   DecorationSchema,
   PlaceholderSchema,
+  GroupValueSchema,
   AttributeValueSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
@@ -115,6 +116,55 @@ test("schema placeholder: rejects invalid placeholder names", () => {
   )
 })
 
+// --- GroupValue関連 ---
+
+const groupValueArb = fc.record({
+  type: fc.constant("group" as const),
+  values: fc.array(
+    fc.oneof(
+      validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
+      fc.string(),
+      fc.double({ noNaN: true, noDefaultInfinity: true }),
+      fc.integer(),
+      fc.boolean(),
+      fc.constant(null),
+    ),
+    { maxLength: 5 },
+  ),
+})
+
+// 有効な GroupValue は常にバリデーション成功することを確認する
+test("schema group value: accepts valid group values", () => {
+  fc.assert(
+    fc.property(groupValueArb, (groupValue) => {
+      const result = GroupValueSchema.safeParse(groupValue)
+      assert.isTrue(result.success)
+    }),
+  )
+})
+
+// GroupValue の type が "group" でない場合はバリデーション失敗することを確認する
+test("schema group value: rejects invalid type", () => {
+  const result = GroupValueSchema.safeParse({ type: "invalid", values: [] })
+  assert.isFalse(result.success)
+})
+
+// GroupValue の values が配列でない場合はバリデーション失敗することを確認する
+test("schema group value: rejects non-array values", () => {
+  const result = GroupValueSchema.safeParse({ type: "group", values: "not-array" })
+  assert.isFalse(result.success)
+})
+
+// AttributeValueSchema が GroupValue を受理することを確認する
+test("schema attribute value: accepts group value", () => {
+  fc.assert(
+    fc.property(groupValueArb, (groupValue) => {
+      const result = AttributeValueSchema.safeParse(groupValue)
+      assert.isTrue(result.success)
+    }),
+  )
+})
+
 // AttributeValueSchema が JSON 値を受理することを確認する
 test("schema attribute value: accepts json values", () => {
   fc.assert(
@@ -147,6 +197,9 @@ const tokenKindValues = [
   "EQUALS",
   "JSON_VALUE",
   "PLACEHOLDER",
+  "LPAREN",
+  "RPAREN",
+  "COMMA",
   "EOF",
 ] as const
 
@@ -233,13 +286,23 @@ test("schema token: rejects invalid kind", () => {
 const tagNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/)
 
 // letrec 内の再帰と組み合わせてもスタックオーバーフローしないよう、
-// 属性値はフラットなプリミティブまたは placeholder のみにする
+// 属性値はフラットなプリミティブ、placeholder、またはグループ値にする
 const flatAttributeValueArb = fc.oneof(
   fc.string(),
   fc.double({ noNaN: true, noDefaultInfinity: true }),
   fc.boolean(),
   fc.constant(null),
   validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
+  fc.array(
+    fc.oneof(
+      fc.string(),
+      fc.integer(),
+      fc.boolean(),
+      fc.constant(null),
+      validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
+    ),
+    { maxLength: 3 },
+  ).map((values) => ({ type: "group" as const, values })),
 )
 
 const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({

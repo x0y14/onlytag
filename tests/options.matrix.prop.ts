@@ -32,6 +32,29 @@ const placeholderAttributeArb = fc
   .tuple(identArb, placeholderNameArb)
   .map(([key, name]) => `${key}=$${name}`)
 
+/** グループ値の要素 */
+const groupValueItemArb = fc.oneof(
+  jsonLiteralArb,
+  placeholderNameArb.map((name) => `$${name}`),
+)
+
+/** グループ属性文字列（必ず placeholder を含む） */
+const groupWithPlaceholderAttributeArb = fc
+  .tuple(
+    identArb,
+    placeholderNameArb.map((name) => `$${name}`),
+    fc.array(groupValueItemArb, { minLength: 0, maxLength: 2 }),
+  )
+  .map(([key, placeholder, otherItems]) => `${key}=(${[placeholder, ...otherItems].join(", ")})`)
+
+/** グループ属性文字列（JSON のみ） */
+const groupJsonOnlyAttributeArb = fc
+  .tuple(
+    identArb,
+    fc.array(jsonLiteralArb, { minLength: 0, maxLength: 3 }),
+  )
+  .map(([key, items]) => `${key}=(${items.join(", ")})`)
+
 /** カテゴリ A: タグのみ */
 const tagOnlyInputArb = tagNameArb.map((tag) => `<${tag} />`)
 
@@ -134,6 +157,56 @@ test("options property: カテゴリ E は allowAttributes=true かつ allowPlac
     fc.property(optionsArb, placeholderOnlyInputArb, (options, input) => {
       const ot = new onlytag(options)
       if (options.allowAttributes && options.allowPlaceholders) {
+        const tokens = ot.tokenize(input)
+        const document = ot.parse(tokens)
+        assert.strictEqual(document.type, "document")
+      } else {
+        assert.throws(() => {
+          const tokens = ot.tokenize(input)
+          ot.parse(tokens)
+        })
+      }
+    }),
+  )
+})
+
+// カテゴリ F: グループ値（placeholder を含む）は allowAttributes=true かつ allowPlaceholders=true でのみ成功する
+
+/** カテゴリ F: グループ値（placeholder を含む） */
+const groupWithPlaceholderInputArb = fc
+  .tuple(tagNameArb, fc.array(groupWithPlaceholderAttributeArb, { minLength: 1, maxLength: 2 }))
+  .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
+
+test("options property: カテゴリ F（グループ値 + placeholder）は allowAttributes=true かつ allowPlaceholders=true でのみ成功する", () => {
+  fc.assert(
+    fc.property(optionsArb, groupWithPlaceholderInputArb, (options, input) => {
+      const ot = new onlytag(options)
+      if (options.allowAttributes && options.allowPlaceholders) {
+        const tokens = ot.tokenize(input)
+        const document = ot.parse(tokens)
+        assert.strictEqual(document.type, "document")
+      } else {
+        assert.throws(() => {
+          const tokens = ot.tokenize(input)
+          ot.parse(tokens)
+        })
+      }
+    }),
+  )
+})
+
+// カテゴリ G: グループ値（JSON のみ）は allowAttributes=true でのみ成功する
+
+/** カテゴリ G: グループ値（JSON のみ） */
+const groupJsonOnlyInputArb = fc
+  .tuple(tagNameArb, fc.array(groupJsonOnlyAttributeArb, { minLength: 1, maxLength: 2 }))
+  .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
+
+test("options property: カテゴリ G（グループ値 JSON のみ）は allowAttributes=true でのみ成功する", () => {
+  fc.assert(
+    fc.property(optionsArb, groupJsonOnlyInputArb, (options, input) => {
+      const ot = new onlytag(options)
+      if (options.allowAttributes) {
         const tokens = ot.tokenize(input)
         const document = ot.parse(tokens)
         assert.strictEqual(document.type, "document")

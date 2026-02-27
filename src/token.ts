@@ -11,6 +11,9 @@ export const TokenKind = z.enum([
   "EQUALS", // =
   "JSON_VALUE", // JSON値の生文字列
   "PLACEHOLDER", // placeholder（$name 形式）
+  "LPAREN", // (（グループ値の開始）
+  "RPAREN", // )（グループ値の終了）
+  "COMMA", // ,（グループ値のセパレータ）
   "EOF",
 ])
 /** トークン種別の型 */

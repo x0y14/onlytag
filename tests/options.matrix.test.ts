@@ -61,6 +61,38 @@ for (const options of getAllNormalizedOptions()) {
   }
 }
 
+// --- グループ値のオプション制御テスト ---
+
+// allowAttributes=false でグループ値もブロックされることを確認する
+test("options matrix: group value is blocked when allowAttributes=false", () => {
+  const ot = new onlytag({ allowAttributes: false })
+  assert.throws(() => {
+    const tokens = ot.tokenize('<A eq=($mode, "dark") />')
+    ot.parse(tokens)
+  })
+})
+
+// allowPlaceholders=false でグループ内の placeholder がエラーになることを確認する
+test("options matrix: placeholder in group is blocked when allowPlaceholders=false", () => {
+  const ot = new onlytag({ allowPlaceholders: false })
+  assert.throws(() => {
+    const tokens = ot.tokenize("<A eq=($mode, 1) />")
+    ot.parse(tokens)
+  })
+})
+
+// allowPlaceholders=false でグループ内に JSON のみなら成功することを確認する
+test("options matrix: group with json only succeeds when allowPlaceholders=false", () => {
+  const ot = new onlytag({ allowPlaceholders: false })
+  const tokens = ot.tokenize('<A eq=(1, "dark") />')
+  const doc = ot.parse(tokens)
+  assert.strictEqual(doc.type, "document")
+  assert.deepStrictEqual(doc.children[0].attributes["eq"], {
+    type: "group",
+    values: [1, "dark"],
+  })
+})
+
 // --- 境界テスト ---
 
 // decoration が先頭で即座に拒否されることを確認する

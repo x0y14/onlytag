@@ -172,6 +172,48 @@ test("tokenizer error: custom delimiter readJsonValue error contains correct clo
   assert.notInclude(message, "/>")
 })
 
+// --- グループ値のエラーケース ---
+
+// グループが閉じられていない場合は失敗することを確認する
+test("tokenizer error: unclosed group value fails", () => {
+  expectTokenizerErrorWithPosition('<A eq=($mode, "dark" />')
+})
+
+// グループ内に JSON でも placeholder でもない値がある場合は失敗することを確認する
+test("tokenizer error: invalid value in group fails", () => {
+  expectTokenizerErrorWithPosition("<A eq=(@ ) />")
+})
+
+// グループ内で値の後にカンマも閉じ括弧もない場合は失敗することを確認する
+test("tokenizer error: missing comma or rparen in group fails", () => {
+  expectTokenizerErrorWithPosition('<A eq=("a" "b") />')
+})
+
+// allowPlaceholders=false のときグループ内の placeholder はエラーになることを確認する
+test("tokenizer error: placeholder in group disallowed when allowPlaceholders=false", () => {
+  let error: unknown
+  try {
+    otNoPh.tokenize("<A eq=($mode, 1) />")
+  } catch (caught) {
+    error = caught
+  }
+  if (error === undefined) {
+    assert.fail("missing tokenizer error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// グループ内でトレイリングカンマがある場合は失敗することを確認する
+test("tokenizer error: trailing comma in group value fails", () => {
+  expectTokenizerErrorWithPosition("<A eq=(1,) />")
+})
+
+// グループ内で値の後に EOF に達した場合は失敗することを確認する
+test("tokenizer error: eof inside group value fails", () => {
+  expectTokenizerErrorWithPosition("<A eq=(1")
+})
+
 // カスタムデリミタで不正文字はエラーになることを確認する
 test("tokenizer error: custom delimiter invalid character fails", () => {
   const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })

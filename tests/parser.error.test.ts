@@ -170,17 +170,17 @@ test("parser error: cross-delimiter mismatch fails", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
-  // <A で開いて ) で閉じる不正なトークン列を手動構築
+  // <A で開いて ? で閉じる不正なトークン列を手動構築
   const tokens: Token[] = [
     { kind: "LT", value: "<", position: 0, pairIndex: 0 },
     { kind: "IDENT", value: "A", position: 1 },
     { kind: "GT", value: ">", position: 2, pairIndex: 0 },
-    { kind: "LT_SLASH", value: "(/", position: 3, pairIndex: 1 },
+    { kind: "LT_SLASH", value: "!/", position: 3, pairIndex: 1 },
     { kind: "IDENT", value: "A", position: 5 },
-    { kind: "GT", value: ")", position: 6, pairIndex: 1 },
+    { kind: "GT", value: "?", position: 6, pairIndex: 1 },
     { kind: "EOF", value: "", position: 7 },
   ]
 
@@ -205,13 +205,13 @@ test("parser error: self-closing tag cross-delimiter mismatch fails", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
   const tokens: Token[] = [
     { kind: "LT", value: "<", position: 0, pairIndex: 0 },
     { kind: "IDENT", value: "A", position: 1 },
-    { kind: "SLASH_GT", value: "/)", position: 2, pairIndex: 1 },
+    { kind: "SLASH_GT", value: "/?", position: 2, pairIndex: 1 },
     { kind: "EOF", value: "", position: 4 },
   ]
 
@@ -228,6 +228,37 @@ test("parser error: self-closing tag cross-delimiter mismatch fails", () => {
 
   assert.instanceOf(error, Error)
   assert.match((error as Error).message, /mismatched delimiter pair/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// --- グループ値のエラーケース ---
+
+// グループ内の不正なトークンでparse段で失敗することを確認する
+test("parser error: invalid token inside group fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "eq", position: 3 },
+    { kind: "EQUALS", value: "=", position: 5 },
+    { kind: "LPAREN", value: "(", position: 6 },
+    { kind: "IDENT", value: "bad", position: 7 },
+    { kind: "RPAREN", value: ")", position: 10 },
+    { kind: "SLASH_GT", value: "/>", position: 11 },
+    { kind: "EOF", value: "", position: 13 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
@@ -394,4 +425,153 @@ test("parser error: allowMixedDelimiters=false かつ allowInconsistentClosures=
   const tokens = ot.tokenize("<foo /><foo /><bar></bar>")
   const doc = ot.parse(tokens)
   assert.strictEqual(doc.type, "document")
+// allowPlaceholders=false のときグループ内の PLACEHOLDER はエラーになることを確認する
+test("parser error: placeholder in group disallowed when allowPlaceholders=false", () => {
+  const otNoPh = new onlytag({ allowPlaceholders: false })
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "eq", position: 3 },
+    { kind: "EQUALS", value: "=", position: 5 },
+    { kind: "LPAREN", value: "(", position: 6 },
+    { kind: "PLACEHOLDER", value: "$mode", position: 7 },
+    { kind: "RPAREN", value: ")", position: 12 },
+    { kind: "SLASH_GT", value: "/>", position: 13 },
+    { kind: "EOF", value: "", position: 15 },
+  ]
+
+  let error: unknown
+  try {
+    otNoPh.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /placeholders are not allowed/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// グループ内の PLACEHOLDER トークンが "$" で始まらない場合にparse段で失敗することを確認する
+test("parser error: placeholder in group not starting with $ fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "eq", position: 3 },
+    { kind: "EQUALS", value: "=", position: 5 },
+    { kind: "LPAREN", value: "(", position: 6 },
+    { kind: "PLACEHOLDER", value: "abc", position: 7 },
+    { kind: "RPAREN", value: ")", position: 10 },
+    { kind: "SLASH_GT", value: "/>", position: 11 },
+    { kind: "EOF", value: "", position: 13 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /expected to start with "\$"/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// グループ内の PLACEHOLDER トークンが "$" のみで名前が空の場合にparse段で失敗することを確認する
+test("parser error: placeholder in group with empty name fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "eq", position: 3 },
+    { kind: "EQUALS", value: "=", position: 5 },
+    { kind: "LPAREN", value: "(", position: 6 },
+    { kind: "PLACEHOLDER", value: "$", position: 7 },
+    { kind: "RPAREN", value: ")", position: 8 },
+    { kind: "SLASH_GT", value: "/>", position: 9 },
+    { kind: "EOF", value: "", position: 11 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /name is empty/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// グループ内の PLACEHOLDER トークンの名前に不正文字を含む場合にparse段で失敗することを確認する
+test("parser error: placeholder in group with invalid name characters fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "eq", position: 3 },
+    { kind: "EQUALS", value: "=", position: 5 },
+    { kind: "LPAREN", value: "(", position: 6 },
+    { kind: "PLACEHOLDER", value: "$1abc", position: 7 },
+    { kind: "RPAREN", value: ")", position: 12 },
+    { kind: "SLASH_GT", value: "/>", position: 13 },
+    { kind: "EOF", value: "", position: 15 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /contains invalid characters/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// グループ内の JSON_VALUE トークンが不正な JSON の場合にparse段で失敗することを確認する
+test("parser error: invalid json token in group fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "eq", position: 3 },
+    { kind: "EQUALS", value: "=", position: 5 },
+    { kind: "LPAREN", value: "(", position: 6 },
+    { kind: "JSON_VALUE", value: "{", position: 7 },
+    { kind: "RPAREN", value: ")", position: 8 },
+    { kind: "SLASH_GT", value: "/>", position: 9 },
+    { kind: "EOF", value: "", position: 11 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /invalid json attribute/i)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
 })
