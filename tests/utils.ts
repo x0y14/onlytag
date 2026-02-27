@@ -7,14 +7,70 @@ const defaultTags = [{ opening: "<", closing: ">" }] as const
  */
 export function getAllNormalizedOptions(): NormalizedOptions[] {
   return [
-    { allowDecorations: true, allowAttributes: true, allowPlaceholders: true, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
-    { allowDecorations: true, allowAttributes: true, allowPlaceholders: false, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
-    { allowDecorations: true, allowAttributes: false, allowPlaceholders: true, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
-    { allowDecorations: true, allowAttributes: false, allowPlaceholders: false, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: true, allowPlaceholders: true, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: true, allowPlaceholders: false, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: false, allowPlaceholders: true, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: false, allowPlaceholders: false, allowMixedDelimiters: true, allowInconsistentClosures: true, tags: [...defaultTags] },
+    {
+      allowDecorations: true,
+      allowAttributes: true,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: true,
+      allowAttributes: true,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: true,
+      allowAttributes: false,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: true,
+      allowAttributes: false,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: true,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: true,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: false,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: false,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
   ]
 }
 

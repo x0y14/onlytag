@@ -425,6 +425,8 @@ test("parser error: allowMixedDelimiters=false かつ allowInconsistentClosures=
   const tokens = ot.tokenize("<foo /><foo /><bar></bar>")
   const doc = ot.parse(tokens)
   assert.strictEqual(doc.type, "document")
+})
+
 // allowPlaceholders=false のときグループ内の PLACEHOLDER はエラーになることを確認する
 test("parser error: placeholder in group disallowed when allowPlaceholders=false", () => {
   const otNoPh = new onlytag({ allowPlaceholders: false })

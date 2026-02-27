@@ -2,7 +2,20 @@ import { z } from "zod"
 
 /** デリミタとして許可される文字の集合 */
 export const ALLOWED_DELIMITER_CHARS: ReadonlySet<string> = new Set([
-  "!", "#", "%", "&", "*", "+", ";", "<", ">", "?", "@", "^", "|", "~",
+  "!",
+  "#",
+  "%",
+  "&",
+  "*",
+  "+",
+  ";",
+  "<",
+  ">",
+  "?",
+  "@",
+  "^",
+  "|",
+  "~",
 ])
 
 /**
@@ -52,24 +65,26 @@ export interface NormalizedOptions {
 }
 
 /** NormalizedOptions の Zod スキーマ */
-export const NormalizedOptionsSchema = z.object({
-  allowDecorations: z.boolean(),
-  allowAttributes: z.boolean(),
-  allowPlaceholders: z.boolean(),
-  allowMixedDelimiters: z.boolean(),
-  allowInconsistentClosures: z.boolean(),
-  tags: z.array(TagDelimiterPairSchema).min(1),
-}).superRefine((data, ctx) => {
-  try {
-    validateTags(data.tags)
-  } catch (error) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: (error as Error).message,
-      path: ["tags"],
-    })
-  }
-})
+export const NormalizedOptionsSchema = z
+  .object({
+    allowDecorations: z.boolean(),
+    allowAttributes: z.boolean(),
+    allowPlaceholders: z.boolean(),
+    allowMixedDelimiters: z.boolean(),
+    allowInconsistentClosures: z.boolean(),
+    tags: z.array(TagDelimiterPairSchema).min(1),
+  })
+  .superRefine((data, ctx) => {
+    try {
+      validateTags(data.tags)
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: (error as Error).message,
+        path: ["tags"],
+      })
+    }
+  })
 
 /** デフォルトのデリミタペア */
 const DEFAULT_TAGS: TagDelimiterPair[] = [{ opening: "<", closing: ">" }]

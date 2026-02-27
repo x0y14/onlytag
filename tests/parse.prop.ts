@@ -64,11 +64,13 @@ const mixedHeaderPartArb = fc.oneof(
     name,
     phName,
   })),
-  fc.tuple(safeIdentArb, fc.array(groupValueElementArb, { minLength: 0, maxLength: 3 })).map(([name, values]) => ({
-    kind: "group" as const,
-    name,
-    values,
-  })),
+  fc
+    .tuple(safeIdentArb, fc.array(groupValueElementArb, { minLength: 0, maxLength: 3 }))
+    .map(([name, values]) => ({
+      kind: "group" as const,
+      name,
+      values,
+    })),
 )
 
 const selfClosingElementArb = fc

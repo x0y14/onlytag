@@ -293,16 +293,18 @@ const flatAttributeValueArb = fc.oneof(
   fc.boolean(),
   fc.constant(null),
   validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
-  fc.array(
-    fc.oneof(
-      fc.string(),
-      fc.integer(),
-      fc.boolean(),
-      fc.constant(null),
-      validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
-    ),
-    { maxLength: 3 },
-  ).map((values) => ({ type: "group" as const, values })),
+  fc
+    .array(
+      fc.oneof(
+        fc.string(),
+        fc.integer(),
+        fc.boolean(),
+        fc.constant(null),
+        validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
+      ),
+      { maxLength: 3 },
+    )
+    .map((values) => ({ type: "group" as const, values })),
 )
 
 const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
@@ -390,7 +392,14 @@ test("schema normalized feature options: accepts valid options", () => {
       fc.boolean(),
       fc.boolean(),
       validTagsArb,
-      (allowDecorations, allowAttributes, allowPlaceholders, allowMixedDelimiters, allowInconsistentClosures, tags) => {
+      (
+        allowDecorations,
+        allowAttributes,
+        allowPlaceholders,
+        allowMixedDelimiters,
+        allowInconsistentClosures,
+        tags,
+      ) => {
         const result = NormalizedOptionsSchema.safeParse({
           allowDecorations,
           allowAttributes,

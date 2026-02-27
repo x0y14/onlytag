@@ -76,7 +76,12 @@ function tokenError(message: string, position: number): never {
  * @param extraBoundaries - 追加の境界文字（グループ値内での "," や ")" など）
  * @returns 境界であればtrue
  */
-function isJsonBoundary(input: string, end: number, closing: string, extraBoundaries?: string[]): boolean {
+function isJsonBoundary(
+  input: string,
+  end: number,
+  closing: string,
+  extraBoundaries?: string[],
+): boolean {
   const len = input.length
   if (end >= len) return true
   const ch = input[end]
@@ -136,7 +141,12 @@ function readLiteralPreview(input: string, pos: number, closing: string): string
  * @returns JSON値の生文字列と読み取り後の位置のタプル
  * @throws {Error} JSON値が見つからない、または不正な場合
  */
-function readJsonValue(input: string, pos: number, closing: string, extraBoundaries?: string[]): [value: string, newPos: number] {
+function readJsonValue(
+  input: string,
+  pos: number,
+  closing: string,
+  extraBoundaries?: string[],
+): [value: string, newPos: number] {
   const len = input.length
 
   // 属性値の前にある空白を読み飛ばす
@@ -419,10 +429,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         continue
       }
 
-      tokenError(
-        `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
-        pos,
-      )
+      tokenError(`invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`, pos)
     } else {
       // --- タグ外部 ---
 
@@ -459,10 +466,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
       }
 
       // 通常の不正文字
-      tokenError(
-        `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
-        pos,
-      )
+      tokenError(`invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`, pos)
     }
   }
 
@@ -498,23 +502,14 @@ function parsePlaceholder(phToken: Token, options: NormalizedOptions): Placehold
   }
   const raw = phToken.value
   if (!raw.startsWith("$")) {
-    parseError(
-      `invalid placeholder: expected to start with "$", actual="${raw}"`,
-      phToken.position,
-    )
+    parseError(`invalid placeholder: expected to start with "$", actual="${raw}"`, phToken.position)
   }
   const name = raw.slice(1)
   if (name.length === 0) {
-    parseError(
-      `invalid placeholder: name is empty in "${raw}"`,
-      phToken.position,
-    )
+    parseError(`invalid placeholder: name is empty in "${raw}"`, phToken.position)
   }
   if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
-    parseError(
-      `invalid placeholder: name "${name}" contains invalid characters`,
-      phToken.position,
-    )
+    parseError(`invalid placeholder: name "${name}" contains invalid characters`, phToken.position)
   }
   return { type: "placeholder", name }
 }
@@ -653,8 +648,11 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     // 自己閉じ
     if (peek().kind === "SLASH_GT") {
       const slashGtToken = advance()
-      if (openPairIndex !== undefined && slashGtToken.pairIndex !== undefined
-        && openPairIndex !== slashGtToken.pairIndex) {
+      if (
+        openPairIndex !== undefined &&
+        slashGtToken.pairIndex !== undefined &&
+        openPairIndex !== slashGtToken.pairIndex
+      ) {
         parseError(
           `mismatched delimiter pair for <${tagName}/>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${slashGtToken.pairIndex}>`,
           slashGtToken.position,
@@ -710,7 +708,11 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         closeTag.position,
       )
     }
-    if (openPairIndex !== undefined && closePairIndex !== undefined && openPairIndex !== closePairIndex) {
+    if (
+      openPairIndex !== undefined &&
+      closePairIndex !== undefined &&
+      openPairIndex !== closePairIndex
+    ) {
       parseError(
         `mismatched delimiter pair for <${tagName}>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${closePairIndex}>`,
         closeLtSlashToken.position,
