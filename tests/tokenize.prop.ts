@@ -126,6 +126,31 @@ test("tokenize property: invalid attributes are rejected", () => {
   )
 })
 
+// 有効なグループ値属性を含むタグは LPAREN/RPAREN トークンを生成することを確認する
+test("tokenize property: valid group attribute produces LPAREN and RPAREN tokens", () => {
+  const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+  const groupItemArb = fc.oneof(
+    jsonLiteralArb,
+    placeholderNameArb.map((name) => `$${name}`),
+  )
+  fc.assert(
+    fc.property(
+      identArb,
+      identArb,
+      fc.array(groupItemArb, { minLength: 0, maxLength: 3 }),
+      (tag, attrName, items) => {
+        const input = `<${tag} ${attrName}=(${items.join(", ")}) />`
+        const tokens = ot.tokenize(input)
+        const lparen = tokens.find((t) => t.kind === "LPAREN")
+        const rparen = tokens.find((t) => t.kind === "RPAREN")
+        assert.isDefined(lparen)
+        assert.isDefined(rparen)
+      },
+    ),
+    { numRuns: 200 },
+  )
+})
+
 // 有効な placeholder 属性を含むタグは PLACEHOLDER トークンを生成することを確認する
 test("tokenize property: valid placeholder attribute produces PLACEHOLDER token", () => {
   const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)

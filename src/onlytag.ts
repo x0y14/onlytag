@@ -5,6 +5,7 @@ import type {
   Decoration,
   JsonValue,
   Placeholder,
+  GroupValue,
   AttributeValue,
 } from "./ast.js"
 import { DocumentNodeSchema } from "./ast.js"
@@ -72,14 +73,20 @@ function tokenError(message: string, position: number): never {
  * @param input - 入力文字列全体
  * @param end - 判定対象の位置
  * @param closing - 現在のタグの閉じデリミタ文字
+ * @param extraBoundaries - 追加の境界文字（グループ値内での "," や ")" など）
  * @returns 境界であればtrue
  */
-function isJsonBoundary(input: string, end: number, closing: string): boolean {
+function isJsonBoundary(input: string, end: number, closing: string, extraBoundaries?: string[]): boolean {
   const len = input.length
   if (end >= len) return true
   const ch = input[end]
   if (isWhitespace(ch) || ch === closing) return true
   if (ch === "/" && end + 1 < len && input[end + 1] === closing) return true
+  if (extraBoundaries) {
+    for (const boundary of extraBoundaries) {
+      if (ch === boundary) return true
+    }
+  }
   return false
 }
 
@@ -125,10 +132,11 @@ function readLiteralPreview(input: string, pos: number, closing: string): string
  * @param input - 入力文字列全体
  * @param pos - 読み取り開始位置
  * @param closing - 現在のタグの閉じデリミタ文字
+ * @param extraBoundaries - 追加の境界文字（グループ値内での "," や ")" など）
  * @returns JSON値の生文字列と読み取り後の位置のタプル
  * @throws {Error} JSON値が見つからない、または不正な場合
  */
-function readJsonValue(input: string, pos: number, closing: string): [value: string, newPos: number] {
+function readJsonValue(input: string, pos: number, closing: string, extraBoundaries?: string[]): [value: string, newPos: number] {
   const len = input.length
 
   // 属性値の前にある空白を読み飛ばす
@@ -138,7 +146,7 @@ function readJsonValue(input: string, pos: number, closing: string): [value: str
     tokenError("missing attribute value: expected=<json-value>, actual=<eof>", pos)
   }
 
-  if (isJsonBoundary(input, pos, closing)) {
+  if (isJsonBoundary(input, pos, closing, extraBoundaries)) {
     const actual = input[pos] === "/" ? "/" + closing : input[pos]
     tokenError(`missing attribute value: expected=<json-value>, actual=<${actual}>`, pos)
   }
@@ -149,7 +157,7 @@ function readJsonValue(input: string, pos: number, closing: string): [value: str
 
   let lastDecodeIssue = "invalid json"
   for (let end = pos + 1; end <= len; end++) {
-    if (!isJsonBoundary(input, end, closing)) continue
+    if (!isJsonBoundary(input, end, closing, extraBoundaries)) continue
     const candidate = input.slice(pos, end)
     const result = decodeJsonString(candidate)
     if (result.success) {
@@ -243,6 +251,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
   let insideTag = false
   let currentClosing: string | null = null
   let currentPairIndex: number | null = null
+  let insideGroup = false
 
   // ルックアップ構造
   const openingLookup = buildOpeningLookup(options.tags)
@@ -261,7 +270,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
     // 空白を読み飛ばす
     while (pos < len && isWhitespace(input[pos])) pos++
 
-    // EQUALS の直後は JSON 値または placeholder として読む
+    // EQUALS の直後は JSON 値、placeholder、またはグループ値として読む
     if (lastKind === "EQUALS") {
       // 属性値前の空白を読み飛ばす
       while (pos < len && isWhitespace(input[pos])) pos++
@@ -274,12 +283,71 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         const [value, newPos] = readPlaceholder(input, pos)
         emit("PLACEHOLDER", value, start)
         pos = newPos
+      } else if (pos < len && input[pos] === "(") {
+        emit("LPAREN", "(", start)
+        pos++
+        insideGroup = true
       } else {
         const [value, newPos] = readJsonValue(input, pos, currentClosing!)
         emit("JSON_VALUE", value, start)
         pos = newPos
       }
       continue
+    }
+
+    // グループ内: LPAREN または COMMA の直後は JSON 値または placeholder を読む
+    if (insideGroup && (lastKind === "LPAREN" || lastKind === "COMMA")) {
+      while (pos < len && isWhitespace(input[pos])) pos++
+
+      // 空グループまたは末尾の RPAREN チェック
+      if (pos < len && input[pos] === ")") {
+        if (lastKind === "LPAREN") {
+          emit("RPAREN", ")", pos)
+          pos++
+          insideGroup = false
+          continue
+        }
+        // COMMA の直後に ) が来るのは不正（値が欠落）
+        tokenError(`missing group value: expected=<json-value|placeholder>, actual=<)>`, pos)
+      }
+
+      const start = pos
+      if (pos < len && input[pos] === "$") {
+        if (!options.allowPlaceholders) {
+          tokenError(`placeholders are not allowed: found placeholder at position`, start)
+        }
+        const [value, newPos] = readPlaceholder(input, pos)
+        emit("PLACEHOLDER", value, start)
+        pos = newPos
+      } else {
+        const [value, newPos] = readJsonValue(input, pos, currentClosing!, [",", ")"])
+        emit("JSON_VALUE", value, start)
+        pos = newPos
+      }
+      continue
+    }
+
+    // グループ内: 値の後は "," か ")" を期待する
+    if (insideGroup && (lastKind === "JSON_VALUE" || lastKind === "PLACEHOLDER")) {
+      while (pos < len && isWhitespace(input[pos])) pos++
+
+      if (pos >= len) {
+        tokenError(`unclosed group value: expected=<,|)>, actual=<eof>`, pos)
+      }
+
+      const ch = input[pos]
+      if (ch === ",") {
+        emit("COMMA", ",", pos)
+        pos++
+        continue
+      }
+      if (ch === ")") {
+        emit("RPAREN", ")", pos)
+        pos++
+        insideGroup = false
+        continue
+      }
+      tokenError(`unexpected character in group value: expected=<,|)>, actual=<${ch}>`, pos)
     }
 
     if (pos >= len) break
@@ -414,6 +482,43 @@ function parseError(message: string, position: number): never {
   throw new Error(`${message}, position=${position}`)
 }
 
+/**
+ * PLACEHOLDER トークンをバリデーションし Placeholder オブジェクトを返す
+ * @param phToken - バリデーション対象の PLACEHOLDER トークン
+ * @param options - 正規化済みの機能オプション
+ * @returns バリデーション済みの Placeholder オブジェクト
+ * @throws {Error} placeholder が許可されていない、または形式が不正な場合
+ */
+function parsePlaceholder(phToken: Token, options: NormalizedOptions): Placeholder {
+  if (!options.allowPlaceholders) {
+    parseError(
+      `placeholders are not allowed: found placeholder "${phToken.value}"`,
+      phToken.position,
+    )
+  }
+  const raw = phToken.value
+  if (!raw.startsWith("$")) {
+    parseError(
+      `invalid placeholder: expected to start with "$", actual="${raw}"`,
+      phToken.position,
+    )
+  }
+  const name = raw.slice(1)
+  if (name.length === 0) {
+    parseError(
+      `invalid placeholder: name is empty in "${raw}"`,
+      phToken.position,
+    )
+  }
+  if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
+    parseError(
+      `invalid placeholder: name "${name}" contains invalid characters`,
+      phToken.position,
+    )
+  }
+  return { type: "placeholder", name }
+}
+
 // --- parse 本体 ---
 
 /**
@@ -476,37 +581,37 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
-        if (peek().kind === "PLACEHOLDER") {
-          if (!options.allowPlaceholders) {
-            parseError(
-              `placeholders are not allowed: found placeholder "${peek().value}"`,
-              peek().position,
-            )
+        if (peek().kind === "LPAREN") {
+          // グループ値のパース
+          advance() // LPAREN を消費
+          const groupValues: (JsonValue | Placeholder)[] = []
+          while (peek().kind !== "RPAREN") {
+            if (groupValues.length > 0) {
+              expect("COMMA")
+            }
+            if (peek().kind === "PLACEHOLDER") {
+              const phToken = advance()
+              groupValues.push(parsePlaceholder(phToken, options))
+            } else {
+              const jsonToken = expect("JSON_VALUE")
+              const parsed = decodeJsonString(jsonToken.value)
+              if (!parsed.success) {
+                const detail = parsed.error.issues[0]!.message
+                parseError(
+                  `invalid json attribute: expected=<valid-json>, actual=<${jsonToken.value}>, attr=<${attrName}>, detail=<${detail}>`,
+                  jsonToken.position,
+                )
+              }
+              encodeJsonValue(parsed.data as JsonValue)
+              groupValues.push(parsed.data as JsonValue)
+            }
           }
+          expect("RPAREN")
+          const groupValue: GroupValue = { type: "group", values: groupValues }
+          attributes[attrName] = groupValue
+        } else if (peek().kind === "PLACEHOLDER") {
           const phToken = advance()
-          const raw = phToken.value
-          // validate placeholder token format: must start with "$" and have a valid name
-          if (!raw.startsWith("$")) {
-            parseError(
-              `invalid placeholder: expected to start with "$", actual="${raw}"`,
-              phToken.position,
-            )
-          }
-          const name = raw.slice(1)
-          if (name.length === 0) {
-            parseError(
-              `invalid placeholder: name is empty in "${raw}"`,
-              phToken.position,
-            )
-          }
-          if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
-            parseError(
-              `invalid placeholder: name "${name}" contains invalid characters`,
-              phToken.position,
-            )
-          }
-          const placeholder: Placeholder = { type: "placeholder", name }
-          attributes[attrName] = placeholder
+          attributes[attrName] = parsePlaceholder(phToken, options)
         } else {
           const jsonToken = expect("JSON_VALUE")
           const parsed = decodeJsonString(jsonToken.value)

@@ -23,11 +23,35 @@ function hasProtoKey(value: unknown): boolean {
   return false
 }
 const safeJsonValueArb = fc.jsonValue().filter((value) => !hasProtoKey(value))
+/** グループ値リテラルの arbitrary */
+const groupValueItemArb = fc.oneof(
+  jsonLiteralArb,
+  placeholderNameArb.map((name) => `$${name}`),
+)
+const groupValueLiteralArb = fc
+  .array(groupValueItemArb, { minLength: 0, maxLength: 3 })
+  .map((items) => `(${items.join(", ")})`)
+
 const headerPartArb = fc.oneof(
   identArb.map((deco) => ({ text: `.${deco}` })),
   fc.tuple(identArb, jsonLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
   fc.tuple(identArb, placeholderNameArb).map(([name, phName]) => ({ text: `${name}=$${phName}` })),
+  fc.tuple(identArb, groupValueLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
 )
+/** グループ値の要素で使用禁止な type プロパティを持つかどうかを判定する */
+function hasReservedType(value: unknown): boolean {
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>
+    return record["type"] === "placeholder" || record["type"] === "group"
+  }
+  return false
+}
+/** グループ値の要素 arbitrary（解析結果比較用） */
+const groupValueElementArb = fc.oneof(
+  safeJsonValueArb.filter((value) => !hasReservedType(value)),
+  placeholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
+)
+
 const mixedHeaderPartArb = fc.oneof(
   safeIdentArb.map((name) => ({ kind: "deco" as const, name })),
   fc.tuple(safeIdentArb, safeJsonValueArb).map(([name, value]) => ({
@@ -39,6 +63,11 @@ const mixedHeaderPartArb = fc.oneof(
     kind: "placeholder" as const,
     name,
     phName,
+  })),
+  fc.tuple(safeIdentArb, fc.array(groupValueElementArb, { minLength: 0, maxLength: 3 })).map(([name, values]) => ({
+    kind: "group" as const,
+    name,
+    values,
   })),
 )
 
@@ -121,6 +150,15 @@ test("parse property: random attr and deco order is parsed correctly", () => {
           .map((part) => {
             if (part.kind === "deco") return `.${part.name}`
             if (part.kind === "placeholder") return `${part.name}=$${part.phName}`
+            if (part.kind === "group") {
+              const items = part.values.map((v: unknown) => {
+                if (v && typeof v === "object" && (v as any).type === "placeholder") {
+                  return `$${(v as any).name}`
+                }
+                return JSON.stringify(v)
+              })
+              return `${part.name}=(${items.join(", ")})`
+            }
             return `${part.name}=${JSON.stringify(part.value)}`
           })
           .join(" ")} />`
@@ -136,6 +174,11 @@ test("parse property: random attr and deco order is parsed correctly", () => {
             expectedAttributes[part.name] = JSON.parse(JSON.stringify(part.value))
           } else if (part.kind === "placeholder") {
             expectedAttributes[part.name] = { type: "placeholder", name: part.phName }
+          } else if (part.kind === "group") {
+            expectedAttributes[part.name] = {
+              type: "group",
+              values: part.values.map((v: unknown) => JSON.parse(JSON.stringify(v))),
+            }
           }
         }
         assert.deepStrictEqual(doc.children[0].attributes, expectedAttributes)

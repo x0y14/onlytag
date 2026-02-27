@@ -264,6 +264,84 @@ test("parser: parses mixed json and placeholder attributes", () => {
   assert.equal(node.decorations[0].name, "deco")
 })
 
+// --- グループ値 ---
+
+// グループ値が GroupValue として AST に格納されることを確認する
+test("parser: parses group value with placeholder and json", () => {
+  const doc = ot.parse(ot.tokenize('<tag eq=($mode, "dark") />'))
+  const node = doc.children[0]
+  assert.deepStrictEqual(node.attributes["eq"], {
+    type: "group",
+    values: [
+      { type: "placeholder", name: "mode" },
+      "dark",
+    ],
+  })
+})
+
+// 複数の JSON 値を持つグループ値を解析できることを確認する
+test("parser: parses group value with multiple json values", () => {
+  const doc = ot.parse(ot.tokenize('<tag items=(1, "hello", true) />'))
+  const node = doc.children[0]
+  assert.deepStrictEqual(node.attributes["items"], {
+    type: "group",
+    values: [1, "hello", true],
+  })
+})
+
+// 空グループ値を解析できることを確認する
+test("parser: parses empty group value", () => {
+  const doc = ot.parse(ot.tokenize("<tag key=() />"))
+  const node = doc.children[0]
+  assert.deepStrictEqual(node.attributes["key"], {
+    type: "group",
+    values: [],
+  })
+})
+
+// 単値属性とグループ値属性の共存を解析できることを確認する
+test("parser: parses single value and group value attributes together", () => {
+  const doc = ot.parse(ot.tokenize('<tag a="hello" b=($x, 42) c=true />'))
+  const node = doc.children[0]
+  assert.equal(node.attributes["a"], "hello")
+  assert.deepStrictEqual(node.attributes["b"], {
+    type: "group",
+    values: [
+      { type: "placeholder", name: "x" },
+      42,
+    ],
+  })
+  assert.equal(node.attributes["c"], true)
+})
+
+// デコレーションとグループ値属性の共存を解析できることを確認する
+test("parser: parses decoration and group value attributes together", () => {
+  const doc = ot.parse(ot.tokenize('<tag .primary eq=($mode, "dark") />'))
+  const node = doc.children[0]
+  assert.equal(node.decorations.length, 1)
+  assert.equal(node.decorations[0].name, "primary")
+  assert.deepStrictEqual(node.attributes["eq"], {
+    type: "group",
+    values: [
+      { type: "placeholder", name: "mode" },
+      "dark",
+    ],
+  })
+})
+
+// グループ値内の JSON オブジェクトを解析できることを確認する
+test("parser: parses group value with json object", () => {
+  const doc = ot.parse(ot.tokenize('<tag eq=({"a":1}, $ph) />'))
+  const node = doc.children[0]
+  assert.deepStrictEqual(node.attributes["eq"], {
+    type: "group",
+    values: [
+      { a: 1 },
+      { type: "placeholder", name: "ph" },
+    ],
+  })
+})
+
 // --- カスタムデリミタ統合テスト ---
 
 // パイプデリミタで自己閉じタグを解析できることを確認する
@@ -308,8 +386,8 @@ test("parser: custom delimiter with attributes", () => {
 
 // カスタムデリミタでデコレーション付き要素を解析できることを確認する
 test("parser: custom delimiter with decorations", () => {
-  const otCustom = new onlytag({ tags: [{ opening: "(", closing: ")" }] })
-  const doc = otCustom.parse(otCustom.tokenize("(Card .elevated .rounded /)"))
+  const otCustom = new onlytag({ tags: [{ opening: "!", closing: "?" }] })
+  const doc = otCustom.parse(otCustom.tokenize("!Card .elevated .rounded /?"))
   const card = doc.children[0]
   assert.equal(card.decorations.length, 2)
   assert.equal(card.decorations[0].name, "elevated")
@@ -338,10 +416,10 @@ test("parser: multiple delimiter pairs nested parsing", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
-  const doc = otMulti.parse(otMulti.tokenize("<Parent>(Child /)</Parent>"))
+  const doc = otMulti.parse(otMulti.tokenize("<Parent>!Child /?</Parent>"))
   assert.equal(doc.children.length, 1)
   const parent = doc.children[0]
   assert.equal(parent.tagName, "Parent")
