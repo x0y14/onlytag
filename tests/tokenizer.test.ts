@@ -393,6 +393,151 @@ test("tokenizer: GT tokens have pairIndex", () => {
   assert.equal(ltSlash.pairIndex, 0)
 })
 
+// --- グループ値 ---
+
+// グループ値を含む自己閉じタグのトークン列を確認する
+test("tokenizer: group value with placeholder and json", () => {
+  const tokens = ot.tokenize('<tag eq=($mode, "dark") />')
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "LPAREN",
+    "PLACEHOLDER",
+    "COMMA",
+    "JSON_VALUE",
+    "RPAREN",
+    "SLASH_GT",
+    "EOF",
+  ])
+})
+
+// グループ値内の複数 JSON 値をトークナイズできることを確認する
+test("tokenizer: group value with multiple json values", () => {
+  const tokens = ot.tokenize('<tag items=(1, "hello", true) />')
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "LPAREN",
+    "JSON_VALUE",
+    "COMMA",
+    "JSON_VALUE",
+    "COMMA",
+    "JSON_VALUE",
+    "RPAREN",
+    "SLASH_GT",
+    "EOF",
+  ])
+  const jsonValues = tokens.filter((t) => t.kind === "JSON_VALUE").map((t) => t.value)
+  assert.deepStrictEqual(jsonValues, ["1", '"hello"', "true"])
+})
+
+// グループ値内の複数 placeholder をトークナイズできることを確認する
+test("tokenizer: group value with multiple placeholders", () => {
+  const tokens = ot.tokenize("<tag items=($a, $b, $c) />")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "LPAREN",
+    "PLACEHOLDER",
+    "COMMA",
+    "PLACEHOLDER",
+    "COMMA",
+    "PLACEHOLDER",
+    "RPAREN",
+    "SLASH_GT",
+    "EOF",
+  ])
+})
+
+// グループ値内の JSON オブジェクトと placeholder の混在をトークナイズできることを確認する
+test("tokenizer: group value with json object and placeholder", () => {
+  const tokens = ot.tokenize('<tag eq=({"a":1}, $ph) />')
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "LPAREN",
+    "JSON_VALUE",
+    "COMMA",
+    "PLACEHOLDER",
+    "RPAREN",
+    "SLASH_GT",
+    "EOF",
+  ])
+  assert.equal(tokens.find((t) => t.kind === "JSON_VALUE")!.value, '{"a":1}')
+})
+
+// 空グループをトークナイズできることを確認する
+test("tokenizer: empty group value", () => {
+  const tokens = ot.tokenize("<tag key=() />")
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "LPAREN",
+    "RPAREN",
+    "SLASH_GT",
+    "EOF",
+  ])
+})
+
+// グループ値と単値属性が共存するタグをトークナイズできることを確認する
+test("tokenizer: group value and single value attributes coexist", () => {
+  const tokens = ot.tokenize('<tag a="hello" b=($x, 42) c=true />')
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "JSON_VALUE",
+    "IDENT",
+    "EQUALS",
+    "LPAREN",
+    "PLACEHOLDER",
+    "COMMA",
+    "JSON_VALUE",
+    "RPAREN",
+    "IDENT",
+    "EQUALS",
+    "JSON_VALUE",
+    "SLASH_GT",
+    "EOF",
+  ])
+})
+
+// グループ値内の値の前後に空白があっても正しくトークナイズできることを確認する
+test("tokenizer: group value with whitespace around values", () => {
+  const tokens = ot.tokenize('<tag eq=( $mode , "dark" ) />')
+  const kinds = tokens.map((t) => t.kind)
+  assert.deepStrictEqual(kinds, [
+    "LT",
+    "IDENT",
+    "IDENT",
+    "EQUALS",
+    "LPAREN",
+    "PLACEHOLDER",
+    "COMMA",
+    "JSON_VALUE",
+    "RPAREN",
+    "SLASH_GT",
+    "EOF",
+  ])
+})
+
 // カスタムデリミタで < と > が通常文字扱いになりエラーとなることを確認する
 test("tokenizer: angle brackets are invalid with custom-only delimiter", () => {
   const otCustom = new onlytag({ tags: [{ opening: "|", closing: "|" }] })

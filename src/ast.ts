@@ -28,20 +28,32 @@ export const PlaceholderSchema = z.object({
 export type Placeholder = z.infer<typeof PlaceholderSchema>
 
 /**
- * JSON値のうち、`type: "placeholder"` を持つオブジェクトを除外したスキーマ。
- * そのようなオブジェクトは PlaceholderSchema によってのみ受理される。
+ * JSON値のうち、`type: "placeholder"` や `type: "group"` を持つオブジェクトを除外したスキーマ。
+ * そのようなオブジェクトは PlaceholderSchema / GroupValueSchema によってのみ受理される。
  */
 const JsonNonPlaceholderValueSchema = JsonValueSchema.refine(
-  (value) => !(value && typeof value === "object" && (value as any).type === "placeholder"),
+  (value) => {
+    if (!value || typeof value !== "object") return true
+    const type = (value as any).type
+    return type !== "placeholder" && type !== "group"
+  },
   {
-    message: 'Objects with type "placeholder" must satisfy PlaceholderSchema',
+    message: 'Objects with type "placeholder" or "group" must satisfy their respective schemas',
   },
 )
 
-/** 属性値のZodスキーマ。placeholder または JSON 値 */
-export const AttributeValueSchema = z.union([PlaceholderSchema, JsonNonPlaceholderValueSchema])
-/** 属性値の型。JSON 値または placeholder */
-export type AttributeValue = Placeholder | JsonValue
+/** グループ値のスキーマ。複数の JSON/Placeholder を保持する */
+export const GroupValueSchema = z.object({
+  type: z.literal("group"),
+  values: z.array(z.union([PlaceholderSchema, JsonNonPlaceholderValueSchema])),
+})
+/** グループ値の型。複数の JSON 値または placeholder をまとめて保持する */
+export type GroupValue = z.infer<typeof GroupValueSchema>
+
+/** 属性値のZodスキーマ。placeholder、グループ値、または JSON 値 */
+export const AttributeValueSchema = z.union([PlaceholderSchema, GroupValueSchema, JsonNonPlaceholderValueSchema])
+/** 属性値の型。JSON 値、placeholder、またはグループ値 */
+export type AttributeValue = Placeholder | GroupValue | JsonValue
 
 /** 要素ノードの型。タグ名・デコレーション・属性・子要素を持つ */
 export type ElementNode = {
