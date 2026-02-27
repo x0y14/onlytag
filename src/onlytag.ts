@@ -551,6 +551,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   }
 
   function parseElement(): ElementNode {
+    /** デリミタペアのインデックスを人間が読める文字列に変換する */
+    const pairToStr = (idx: number) => {
+      const pair = options.tags[idx]
+      return `'${pair.opening}...${pair.closing}'`
+    }
+
     const openLtToken = expect("LT")
     const openPairIndex = openLtToken.pairIndex
     const tagToken = expect("IDENT")
@@ -568,10 +574,6 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       if (seenPairIndex === undefined) {
         tagPairIndexMap.set(tagName, openPairIndex)
       } else if (seenPairIndex !== openPairIndex) {
-        const pairToStr = (idx: number) => {
-          const p = options.tags[idx]
-          return `'${p.opening}...${p.closing}'`
-        }
         parseError(
           `mixed delimiter pair for tag "${tagName}": first seen with ${pairToStr(seenPairIndex)}, now ${pairToStr(openPairIndex)}`,
           openLtToken.position,
@@ -654,7 +656,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         openPairIndex !== slashGtToken.pairIndex
       ) {
         parseError(
-          `mismatched delimiter pair for <${tagName}/>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${slashGtToken.pairIndex}>`,
+          `mismatched delimiter pair for <${tagName}/>: expected=${pairToStr(openPairIndex)}, actual=${pairToStr(slashGtToken.pairIndex)}`,
           slashGtToken.position,
         )
       }
@@ -714,7 +716,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       openPairIndex !== closePairIndex
     ) {
       parseError(
-        `mismatched delimiter pair for <${tagName}>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${closePairIndex}>`,
+        `mismatched delimiter pair for <${tagName}>: expected=${pairToStr(openPairIndex)}, actual=${pairToStr(closePairIndex)}`,
         closeLtSlashToken.position,
       )
     }

@@ -197,6 +197,8 @@ test("parser error: cross-delimiter mismatch fails", () => {
 
   assert.instanceOf(error, Error)
   assert.match((error as Error).message, /mismatched delimiter pair/)
+  assert.match((error as Error).message, /'<\.\.\.>'/)
+  assert.match((error as Error).message, /'!\.\.\.\?'/)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
@@ -228,6 +230,8 @@ test("parser error: self-closing tag cross-delimiter mismatch fails", () => {
 
   assert.instanceOf(error, Error)
   assert.match((error as Error).message, /mismatched delimiter pair/)
+  assert.match((error as Error).message, /'<\.\.\.>'/)
+  assert.match((error as Error).message, /'!\.\.\.\?'/)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
@@ -311,7 +315,7 @@ test("parser error: allowMixedDelimiters=false で同一タグ名を別デリミ
   assert.instanceOf(error, Error)
   assert.match((error as Error).message, /mixed delimiter pair/)
   assert.match((error as Error).message, /'<\.\.\.>'/)
-  assert.match((error as Error).message, /'|\.\.\.|\|'|'\|\.\.\.'/i)
+  assert.match((error as Error).message, /'\|\.\.\.\|'/)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
