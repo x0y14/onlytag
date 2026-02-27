@@ -468,8 +468,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       if (seenPairIndex === undefined) {
         tagPairIndexMap.set(tagName, openPairIndex)
       } else if (seenPairIndex !== openPairIndex) {
+        const pairToStr = (idx: number) => {
+          const p = options.tags[idx]
+          return `'${p.opening}...${p.closing}'`
+        }
         parseError(
-          `mixed delimiter pair for tag "${tagName}": first seen with pairIndex=${seenPairIndex}, now pairIndex=${openPairIndex}`,
+          `mixed delimiter pair for tag "${tagName}": first seen with ${pairToStr(seenPairIndex)}, now ${pairToStr(openPairIndex)}`,
           openLtToken.position,
         )
       }
@@ -617,7 +621,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       } else if (seenSelfClosing) {
         parseError(
           `inconsistent closure for tag "${tagName}": previously used as self-closing, now used as open/close`,
-          openLtToken.position,
+          closeLtSlashToken.position,
         )
       }
     }

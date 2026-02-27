@@ -270,7 +270,7 @@ test("parser error: allowMixedDelimiters=false で同一タグ名を別デリミ
       { opening: "|", closing: "|" },
     ],
   })
-  // <tag /> で pairIndex=0 を登録した後、|tag/| で pairIndex=1 を使う
+  // <tag /> で '<...>' を登録した後、|tag/| で '|...|' を使う
   let error: unknown
   try {
     ot.parse(ot.tokenize("<tag />|tag/|"))
@@ -279,6 +279,8 @@ test("parser error: allowMixedDelimiters=false で同一タグ名を別デリミ
   }
   assert.instanceOf(error, Error)
   assert.match((error as Error).message, /mixed delimiter pair/)
+  assert.match((error as Error).message, /'<\.\.\.>'/)
+  assert.match((error as Error).message, /'|\.\.\.|\|'|'\|\.\.\.'/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
@@ -352,6 +354,44 @@ test("parser error: allowInconsistentClosures=true で混在させても成功",
 test("parser error: allowInconsistentClosures=false で同じ閉じ形式のみなら成功", () => {
   const ot = new onlytag({ allowInconsistentClosures: false })
   const tokens = ot.tokenize("<tag /><tag />")
+  const doc = ot.parse(tokens)
+  assert.strictEqual(doc.type, "document")
+})
+
+// --- 両オプション同時 ---
+
+// allowMixedDelimiters=false かつ allowInconsistentClosures=false のとき、混在利用はエラーになることを確認する
+test("parser error: allowMixedDelimiters=false かつ allowInconsistentClosures=false で混在はエラー", () => {
+  const ot = new onlytag({
+    allowMixedDelimiters: false,
+    allowInconsistentClosures: false,
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "|", closing: "|" },
+    ],
+  })
+  // mixed delimiter: <tag /> を登録後に |tag/| で違うペアを使う
+  let mixedError: unknown
+  try {
+    ot.parse(ot.tokenize("<tag />|tag/|"))
+  } catch (caught) {
+    mixedError = caught
+  }
+  assert.instanceOf(mixedError, Error)
+  assert.match((mixedError as Error).message, /mixed delimiter pair/)
+})
+
+// allowMixedDelimiters=false かつ allowInconsistentClosures=false のとき、同じデリミタで same-type のみなら成功することを確認する
+test("parser error: allowMixedDelimiters=false かつ allowInconsistentClosures=false で同じペア・同じ閉じ形式なら成功", () => {
+  const ot = new onlytag({
+    allowMixedDelimiters: false,
+    allowInconsistentClosures: false,
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "|", closing: "|" },
+    ],
+  })
+  const tokens = ot.tokenize("<foo /><foo /><bar></bar>")
   const doc = ot.parse(tokens)
   assert.strictEqual(doc.type, "document")
 })
