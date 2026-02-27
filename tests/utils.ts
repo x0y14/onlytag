@@ -4,17 +4,78 @@ const defaultTags = [{ opening: "<", closing: ">" }] as const
 
 /**
  * 全ての正規化済みオプション組み合わせを返す
+ *
+ * allowMixedDelimiters と allowInconsistentClosures は常に true で固定している。
+ * マトリックステストの入力はデリミタ 1 種類かつ閉じ方の混在がないため、
+ * false にしても通るコードパスが変わらない。
+ * false 時のエラー系パスは parser.error.test.ts の専用テストでカバーしている。
  */
 export function getAllNormalizedOptions(): NormalizedOptions[] {
   return [
-    { allowDecorations: true, allowAttributes: true, allowPlaceholders: true, tags: [...defaultTags] },
-    { allowDecorations: true, allowAttributes: true, allowPlaceholders: false, tags: [...defaultTags] },
-    { allowDecorations: true, allowAttributes: false, allowPlaceholders: true, tags: [...defaultTags] },
-    { allowDecorations: true, allowAttributes: false, allowPlaceholders: false, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: true, allowPlaceholders: true, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: true, allowPlaceholders: false, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: false, allowPlaceholders: true, tags: [...defaultTags] },
-    { allowDecorations: false, allowAttributes: false, allowPlaceholders: false, tags: [...defaultTags] },
+    {
+      allowDecorations: true,
+      allowAttributes: true,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: true,
+      allowAttributes: true,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: true,
+      allowAttributes: false,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: true,
+      allowAttributes: false,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: true,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: true,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: false,
+      allowPlaceholders: true,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
+    {
+      allowDecorations: false,
+      allowAttributes: false,
+      allowPlaceholders: false,
+      allowMixedDelimiters: true,
+      allowInconsistentClosures: true,
+      tags: [...defaultTags],
+    },
   ]
 }
 

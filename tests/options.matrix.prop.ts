@@ -49,10 +49,7 @@ const groupWithPlaceholderAttributeArb = fc
 
 /** グループ属性文字列（JSON のみ） */
 const groupJsonOnlyAttributeArb = fc
-  .tuple(
-    identArb,
-    fc.array(jsonLiteralArb, { minLength: 0, maxLength: 3 }),
-  )
+  .tuple(identArb, fc.array(jsonLiteralArb, { minLength: 0, maxLength: 3 }))
   .map(([key, items]) => `${key}=(${items.join(", ")})`)
 
 /** カテゴリ A: タグのみ */

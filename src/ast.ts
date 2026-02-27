@@ -51,7 +51,11 @@ export const GroupValueSchema = z.object({
 export type GroupValue = z.infer<typeof GroupValueSchema>
 
 /** 属性値のZodスキーマ。placeholder、グループ値、または JSON 値 */
-export const AttributeValueSchema = z.union([PlaceholderSchema, GroupValueSchema, JsonNonPlaceholderValueSchema])
+export const AttributeValueSchema = z.union([
+  PlaceholderSchema,
+  GroupValueSchema,
+  JsonNonPlaceholderValueSchema,
+])
 /** 属性値の型。JSON 値、placeholder、またはグループ値 */
 export type AttributeValue = Placeholder | GroupValue | JsonValue
 

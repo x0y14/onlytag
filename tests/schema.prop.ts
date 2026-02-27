@@ -293,16 +293,18 @@ const flatAttributeValueArb = fc.oneof(
   fc.boolean(),
   fc.constant(null),
   validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
-  fc.array(
-    fc.oneof(
-      fc.string(),
-      fc.integer(),
-      fc.boolean(),
-      fc.constant(null),
-      validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
-    ),
-    { maxLength: 3 },
-  ).map((values) => ({ type: "group" as const, values })),
+  fc
+    .array(
+      fc.oneof(
+        fc.string(),
+        fc.integer(),
+        fc.boolean(),
+        fc.constant(null),
+        validPlaceholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
+      ),
+      { maxLength: 3 },
+    )
+    .map((values) => ({ type: "group" as const, values })),
 )
 
 const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
@@ -387,12 +389,23 @@ test("schema normalized feature options: accepts valid options", () => {
       fc.boolean(),
       fc.boolean(),
       fc.boolean(),
+      fc.boolean(),
+      fc.boolean(),
       validTagsArb,
-      (allowDecorations, allowAttributes, allowPlaceholders, tags) => {
+      (
+        allowDecorations,
+        allowAttributes,
+        allowPlaceholders,
+        allowMixedDelimiters,
+        allowInconsistentClosures,
+        tags,
+      ) => {
         const result = NormalizedOptionsSchema.safeParse({
           allowDecorations,
           allowAttributes,
           allowPlaceholders,
+          allowMixedDelimiters,
+          allowInconsistentClosures,
           tags,
         })
         assert.isTrue(result.success)
@@ -407,6 +420,8 @@ test("schema normalized feature options: rejects non-boolean values", () => {
     allowDecorations: "yes",
     allowAttributes: 1,
     allowPlaceholders: "no",
+    allowMixedDelimiters: true,
+    allowInconsistentClosures: true,
     tags: [{ opening: "<", closing: ">" }],
   })
   assert.isFalse(result.success)
@@ -418,6 +433,8 @@ test("schema normalized feature options: rejects empty tags array", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowMixedDelimiters: true,
+    allowInconsistentClosures: true,
     tags: [],
   })
   assert.isFalse(result.success)
@@ -429,6 +446,8 @@ test("schema normalized feature options: rejects tags with disallowed characters
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowMixedDelimiters: true,
+    allowInconsistentClosures: true,
     tags: [{ opening: "a", closing: ">" }],
   })
   assert.isFalse(result.success)
@@ -440,6 +459,8 @@ test("schema normalized feature options: rejects tags with duplicate characters 
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowMixedDelimiters: true,
+    allowInconsistentClosures: true,
     tags: [
       { opening: "<", closing: ">" },
       { opening: "<", closing: "!" },
@@ -454,6 +475,8 @@ test("schema normalized feature options: rejects missing tags", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowMixedDelimiters: true,
+    allowInconsistentClosures: true,
   })
   assert.isFalse(result.success)
 })

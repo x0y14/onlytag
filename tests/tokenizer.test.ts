@@ -236,15 +236,7 @@ test("tokenizer: percent delimiter with attributes", () => {
   const otPercent = new onlytag({ tags: [{ opening: "%", closing: "%" }] })
   const tokens = otPercent.tokenize('%A name="hello" /%')
   const kinds = tokens.map((t) => t.kind)
-  assert.deepStrictEqual(kinds, [
-    "LT",
-    "IDENT",
-    "IDENT",
-    "EQUALS",
-    "JSON_VALUE",
-    "SLASH_GT",
-    "EOF",
-  ])
+  assert.deepStrictEqual(kinds, ["LT", "IDENT", "IDENT", "EQUALS", "JSON_VALUE", "SLASH_GT", "EOF"])
   assert.equal(tokens.find((t) => t.kind === "JSON_VALUE")!.value, '"hello"')
 })
 
@@ -296,9 +288,15 @@ test("tokenizer: multiple delimiter pairs nested", () => {
   const tokens = otMulti.tokenize("<A>!B /?</A>")
   const kinds = tokens.map((t) => t.kind)
   assert.deepStrictEqual(kinds, [
-    "LT", "IDENT", "GT",
-    "LT", "IDENT", "SLASH_GT",
-    "LT_SLASH", "IDENT", "GT",
+    "LT",
+    "IDENT",
+    "GT",
+    "LT",
+    "IDENT",
+    "SLASH_GT",
+    "LT_SLASH",
+    "IDENT",
+    "GT",
     "EOF",
   ])
 })
@@ -309,9 +307,15 @@ test("tokenizer: same opening and closing delimiter with close tag", () => {
   const tokens = otPipe.tokenize("|Parent||Child /|| /Parent|")
   const kinds = tokens.map((t) => t.kind)
   assert.deepStrictEqual(kinds, [
-    "LT", "IDENT", "GT",
-    "LT", "IDENT", "SLASH_GT",
-    "LT_SLASH", "IDENT", "GT",
+    "LT",
+    "IDENT",
+    "GT",
+    "LT",
+    "IDENT",
+    "SLASH_GT",
+    "LT_SLASH",
+    "IDENT",
+    "GT",
     "EOF",
   ])
 })

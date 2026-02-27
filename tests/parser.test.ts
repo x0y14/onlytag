@@ -272,10 +272,7 @@ test("parser: parses group value with placeholder and json", () => {
   const node = doc.children[0]
   assert.deepStrictEqual(node.attributes["eq"], {
     type: "group",
-    values: [
-      { type: "placeholder", name: "mode" },
-      "dark",
-    ],
+    values: [{ type: "placeholder", name: "mode" }, "dark"],
   })
 })
 
@@ -306,10 +303,7 @@ test("parser: parses single value and group value attributes together", () => {
   assert.equal(node.attributes["a"], "hello")
   assert.deepStrictEqual(node.attributes["b"], {
     type: "group",
-    values: [
-      { type: "placeholder", name: "x" },
-      42,
-    ],
+    values: [{ type: "placeholder", name: "x" }, 42],
   })
   assert.equal(node.attributes["c"], true)
 })
@@ -322,10 +316,7 @@ test("parser: parses decoration and group value attributes together", () => {
   assert.equal(node.decorations[0].name, "primary")
   assert.deepStrictEqual(node.attributes["eq"], {
     type: "group",
-    values: [
-      { type: "placeholder", name: "mode" },
-      "dark",
-    ],
+    values: [{ type: "placeholder", name: "mode" }, "dark"],
   })
 })
 
@@ -335,10 +326,7 @@ test("parser: parses group value with json object", () => {
   const node = doc.children[0]
   assert.deepStrictEqual(node.attributes["eq"], {
     type: "group",
-    values: [
-      { a: 1 },
-      { type: "placeholder", name: "ph" },
-    ],
+    values: [{ a: 1 }, { type: "placeholder", name: "ph" }],
   })
 })
 

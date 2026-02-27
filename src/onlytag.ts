@@ -76,7 +76,12 @@ function tokenError(message: string, position: number): never {
  * @param extraBoundaries - 追加の境界文字（グループ値内での "," や ")" など）
  * @returns 境界であればtrue
  */
-function isJsonBoundary(input: string, end: number, closing: string, extraBoundaries?: string[]): boolean {
+function isJsonBoundary(
+  input: string,
+  end: number,
+  closing: string,
+  extraBoundaries?: string[],
+): boolean {
   const len = input.length
   if (end >= len) return true
   const ch = input[end]
@@ -136,7 +141,12 @@ function readLiteralPreview(input: string, pos: number, closing: string): string
  * @returns JSON値の生文字列と読み取り後の位置のタプル
  * @throws {Error} JSON値が見つからない、または不正な場合
  */
-function readJsonValue(input: string, pos: number, closing: string, extraBoundaries?: string[]): [value: string, newPos: number] {
+function readJsonValue(
+  input: string,
+  pos: number,
+  closing: string,
+  extraBoundaries?: string[],
+): [value: string, newPos: number] {
   const len = input.length
 
   // 属性値の前にある空白を読み飛ばす
@@ -419,10 +429,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         continue
       }
 
-      tokenError(
-        `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
-        pos,
-      )
+      tokenError(`invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`, pos)
     } else {
       // --- タグ外部 ---
 
@@ -459,10 +466,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
       }
 
       // 通常の不正文字
-      tokenError(
-        `invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`,
-        pos,
-      )
+      tokenError(`invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`, pos)
     }
   }
 
@@ -498,23 +502,14 @@ function parsePlaceholder(phToken: Token, options: NormalizedOptions): Placehold
   }
   const raw = phToken.value
   if (!raw.startsWith("$")) {
-    parseError(
-      `invalid placeholder: expected to start with "$", actual="${raw}"`,
-      phToken.position,
-    )
+    parseError(`invalid placeholder: expected to start with "$", actual="${raw}"`, phToken.position)
   }
   const name = raw.slice(1)
   if (name.length === 0) {
-    parseError(
-      `invalid placeholder: name is empty in "${raw}"`,
-      phToken.position,
-    )
+    parseError(`invalid placeholder: name is empty in "${raw}"`, phToken.position)
   }
   if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
-    parseError(
-      `invalid placeholder: name "${name}" contains invalid characters`,
-      phToken.position,
-    )
+    parseError(`invalid placeholder: name "${name}" contains invalid characters`, phToken.position)
   }
   return { type: "placeholder", name }
 }
@@ -530,6 +525,11 @@ function parsePlaceholder(phToken: Token, options: NormalizedOptions): Placehold
  */
 function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   const cursor = { value: 0 }
+
+  // ドキュメント全体でのタグ名ごとのデリミタペア追跡（allowMixedDelimiters 検査用）
+  const tagPairIndexMap = new Map<string, number>()
+  // ドキュメント全体でのタグ名ごとの自己閉じ追跡（allowInconsistentClosures 検査用）
+  const tagClosureMap = new Map<string, boolean>()
 
   function peek(): Token {
     return tokens[cursor.value]
@@ -551,6 +551,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   }
 
   function parseElement(): ElementNode {
+    /** デリミタペアのインデックスを人間が読める文字列に変換する */
+    const pairToStr = (idx: number) => {
+      const pair = options.tags[idx]
+      return `'${pair.opening}...${pair.closing}'`
+    }
+
     const openLtToken = expect("LT")
     const openPairIndex = openLtToken.pairIndex
     const tagToken = expect("IDENT")
@@ -560,6 +566,19 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${tagName}>`,
         tagToken.position,
       )
+    }
+
+    // allowMixedDelimiters チェック: 同一タグ名を別デリミタペアで使用していないか確認
+    if (!options.allowMixedDelimiters && openPairIndex !== undefined) {
+      const seenPairIndex = tagPairIndexMap.get(tagName)
+      if (seenPairIndex === undefined) {
+        tagPairIndexMap.set(tagName, openPairIndex)
+      } else if (seenPairIndex !== openPairIndex) {
+        parseError(
+          `mixed delimiter pair for tag "${tagName}": first seen with ${pairToStr(seenPairIndex)}, now ${pairToStr(openPairIndex)}`,
+          openLtToken.position,
+        )
+      }
     }
 
     // デコレーションと属性
@@ -631,12 +650,27 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     // 自己閉じ
     if (peek().kind === "SLASH_GT") {
       const slashGtToken = advance()
-      if (openPairIndex !== undefined && slashGtToken.pairIndex !== undefined
-        && openPairIndex !== slashGtToken.pairIndex) {
+      if (
+        openPairIndex !== undefined &&
+        slashGtToken.pairIndex !== undefined &&
+        openPairIndex !== slashGtToken.pairIndex
+      ) {
         parseError(
-          `mismatched delimiter pair for <${tagName}/>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${slashGtToken.pairIndex}>`,
+          `mismatched delimiter pair for <${tagName}/>: expected=${pairToStr(openPairIndex)}, actual=${pairToStr(slashGtToken.pairIndex)}`,
           slashGtToken.position,
         )
+      }
+      // allowInconsistentClosures チェック: 以前 open/close で使われていないか確認
+      if (!options.allowInconsistentClosures) {
+        const seenSelfClosing = tagClosureMap.get(tagName)
+        if (seenSelfClosing === undefined) {
+          tagClosureMap.set(tagName, true)
+        } else if (!seenSelfClosing) {
+          parseError(
+            `inconsistent closure for tag "${tagName}": previously used as open/close, now used as self-closing`,
+            openLtToken.position,
+          )
+        }
       }
       return {
         type: "element",
@@ -676,13 +710,30 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         closeTag.position,
       )
     }
-    if (openPairIndex !== undefined && closePairIndex !== undefined && openPairIndex !== closePairIndex) {
+    if (
+      openPairIndex !== undefined &&
+      closePairIndex !== undefined &&
+      openPairIndex !== closePairIndex
+    ) {
       parseError(
-        `mismatched delimiter pair for <${tagName}>: expected=<pairIndex=${openPairIndex}>, actual=<pairIndex=${closePairIndex}>`,
+        `mismatched delimiter pair for <${tagName}>: expected=${pairToStr(openPairIndex)}, actual=${pairToStr(closePairIndex)}`,
         closeLtSlashToken.position,
       )
     }
     expect("GT")
+
+    // allowInconsistentClosures チェック: 以前 self-closing で使われていないか確認
+    if (!options.allowInconsistentClosures) {
+      const seenSelfClosing = tagClosureMap.get(tagName)
+      if (seenSelfClosing === undefined) {
+        tagClosureMap.set(tagName, false)
+      } else if (seenSelfClosing) {
+        parseError(
+          `inconsistent closure for tag "${tagName}": previously used as self-closing, now used as open/close`,
+          closeLtSlashToken.position,
+        )
+      }
+    }
 
     return {
       type: "element",
