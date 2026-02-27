@@ -386,8 +386,8 @@ test("parser: custom delimiter with attributes", () => {
 
 // カスタムデリミタでデコレーション付き要素を解析できることを確認する
 test("parser: custom delimiter with decorations", () => {
-  const otCustom = new onlytag({ tags: [{ opening: "(", closing: ")" }] })
-  const doc = otCustom.parse(otCustom.tokenize("(Card .elevated .rounded /)"))
+  const otCustom = new onlytag({ tags: [{ opening: "!", closing: "?" }] })
+  const doc = otCustom.parse(otCustom.tokenize("!Card .elevated .rounded /?"))
   const card = doc.children[0]
   assert.equal(card.decorations.length, 2)
   assert.equal(card.decorations[0].name, "elevated")
@@ -416,10 +416,10 @@ test("parser: multiple delimiter pairs nested parsing", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
-  const doc = otMulti.parse(otMulti.tokenize("<Parent>(Child /)</Parent>"))
+  const doc = otMulti.parse(otMulti.tokenize("<Parent>!Child /?</Parent>"))
   assert.equal(doc.children.length, 1)
   const parent = doc.children[0]
   assert.equal(parent.tagName, "Parent")

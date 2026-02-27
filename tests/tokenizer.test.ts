@@ -250,8 +250,8 @@ test("tokenizer: percent delimiter with attributes", () => {
 
 // カスタムデリミタでデコレーション付きタグをトークナイズできることを確認する
 test("tokenizer: custom delimiter with decorations", () => {
-  const otCustom = new onlytag({ tags: [{ opening: "(", closing: ")" }] })
-  const tokens = otCustom.tokenize("(Card .elevated /)")
+  const otCustom = new onlytag({ tags: [{ opening: "!", closing: "?" }] })
+  const tokens = otCustom.tokenize("!Card .elevated /?")
   const kinds = tokens.map((t) => t.kind)
   assert.deepStrictEqual(kinds, ["LT", "IDENT", "DOT_IDENT", "SLASH_GT", "EOF"])
   assert.equal(tokens.find((t) => t.kind === "DOT_IDENT")!.value, ".elevated")
@@ -270,7 +270,7 @@ test("tokenizer: multiple delimiter pairs", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
   const tokens1 = otMulti.tokenize("<A />")
@@ -278,7 +278,7 @@ test("tokenizer: multiple delimiter pairs", () => {
     tokens1.map((t) => t.kind),
     ["LT", "IDENT", "SLASH_GT", "EOF"],
   )
-  const tokens2 = otMulti.tokenize("(B /)")
+  const tokens2 = otMulti.tokenize("!B /?")
   assert.deepStrictEqual(
     tokens2.map((t) => t.kind),
     ["LT", "IDENT", "SLASH_GT", "EOF"],
@@ -290,10 +290,10 @@ test("tokenizer: multiple delimiter pairs nested", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
-  const tokens = otMulti.tokenize("<A>(B /)</A>")
+  const tokens = otMulti.tokenize("<A>!B /?</A>")
   const kinds = tokens.map((t) => t.kind)
   assert.deepStrictEqual(kinds, [
     "LT", "IDENT", "GT",
@@ -335,8 +335,8 @@ test("tokenizer: custom delimiter with placeholder", () => {
 
 // カスタムデリミタで JSON 値の境界を正しく検出することを確認する
 test("tokenizer: custom delimiter json boundary detection", () => {
-  const otCustom = new onlytag({ tags: [{ opening: "(", closing: ")" }] })
-  const tokens = otCustom.tokenize('(A config={"k":1}/)')
+  const otCustom = new onlytag({ tags: [{ opening: "!", closing: "?" }] })
+  const tokens = otCustom.tokenize('!A config={"k":1}/?')
   const jsonToken = tokens.find((t) => t.kind === "JSON_VALUE")
   assert.equal(jsonToken!.value, '{"k":1}')
 })
@@ -348,20 +348,20 @@ test("tokenizer: delimiter tokens have pairIndex", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
-  const tokens = otMulti.tokenize("<A />(B /)")
+  const tokens = otMulti.tokenize("<A />!B /?")
 
   const ltAngle = tokens.find((t) => t.kind === "LT" && t.value === "<")!
   assert.equal(ltAngle.pairIndex, 0)
   const slashGtAngle = tokens.find((t) => t.kind === "SLASH_GT" && t.value === "/>")!
   assert.equal(slashGtAngle.pairIndex, 0)
 
-  const ltParen = tokens.find((t) => t.kind === "LT" && t.value === "(")!
-  assert.equal(ltParen.pairIndex, 1)
-  const slashGtParen = tokens.find((t) => t.kind === "SLASH_GT" && t.value === "/)")!
-  assert.equal(slashGtParen.pairIndex, 1)
+  const ltExcl = tokens.find((t) => t.kind === "LT" && t.value === "!")!
+  assert.equal(ltExcl.pairIndex, 1)
+  const slashGtQuest = tokens.find((t) => t.kind === "SLASH_GT" && t.value === "/?")!
+  assert.equal(slashGtQuest.pairIndex, 1)
 })
 
 // 非デリミタトークン（IDENT, DOT_IDENT, EQUALS, JSON_VALUE, PLACEHOLDER, EOF）に pairIndex が付与されないことを確認する
@@ -380,10 +380,10 @@ test("tokenizer: GT tokens have pairIndex", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
-  const tokens = otMulti.tokenize("<A>(B /)</A>")
+  const tokens = otMulti.tokenize("<A>!B /?</A>")
 
   const gtTokens = tokens.filter((t) => t.kind === "GT")
   assert.equal(gtTokens[0].pairIndex, 0) // <A> の >

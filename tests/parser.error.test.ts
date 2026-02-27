@@ -170,17 +170,17 @@ test("parser error: cross-delimiter mismatch fails", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
-  // <A で開いて ) で閉じる不正なトークン列を手動構築
+  // <A で開いて ? で閉じる不正なトークン列を手動構築
   const tokens: Token[] = [
     { kind: "LT", value: "<", position: 0, pairIndex: 0 },
     { kind: "IDENT", value: "A", position: 1 },
     { kind: "GT", value: ">", position: 2, pairIndex: 0 },
-    { kind: "LT_SLASH", value: "(/", position: 3, pairIndex: 1 },
+    { kind: "LT_SLASH", value: "!/", position: 3, pairIndex: 1 },
     { kind: "IDENT", value: "A", position: 5 },
-    { kind: "GT", value: ")", position: 6, pairIndex: 1 },
+    { kind: "GT", value: "?", position: 6, pairIndex: 1 },
     { kind: "EOF", value: "", position: 7 },
   ]
 
@@ -205,13 +205,13 @@ test("parser error: self-closing tag cross-delimiter mismatch fails", () => {
   const otMulti = new onlytag({
     tags: [
       { opening: "<", closing: ">" },
-      { opening: "(", closing: ")" },
+      { opening: "!", closing: "?" },
     ],
   })
   const tokens: Token[] = [
     { kind: "LT", value: "<", position: 0, pairIndex: 0 },
     { kind: "IDENT", value: "A", position: 1 },
-    { kind: "SLASH_GT", value: "/)", position: 2, pairIndex: 1 },
+    { kind: "SLASH_GT", value: "/?", position: 2, pairIndex: 1 },
     { kind: "EOF", value: "", position: 4 },
   ]
 

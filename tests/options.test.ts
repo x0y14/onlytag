@@ -188,6 +188,22 @@ test("normalizeOptions: 非 ASCII 文字はエラー", () => {
   )
 })
 
+// "(" がデリミタとして拒否されることを確認する
+test("normalizeOptions: ( はデリミタとして使用できない", () => {
+  assert.throws(
+    () => normalizeOptions({ tags: [{ opening: "(", closing: ")" }] }),
+    /not in allowed delimiter characters/,
+  )
+})
+
+// ")" がデリミタとして拒否されることを確認する
+test("normalizeOptions: ) はデリミタとして使用できない", () => {
+  assert.throws(
+    () => normalizeOptions({ tags: [{ opening: "!", closing: ")" }] }),
+    /not in allowed delimiter characters/,
+  )
+})
+
 // 同一ペア内で opening === closing は許可されることを確認する
 test("normalizeOptions: 同一ペア内で opening === closing は許可", () => {
   const result = normalizeOptions({ tags: [{ opening: "|", closing: "|" }] })
@@ -238,7 +254,7 @@ test("normalizeOptions: 異なるペア間で opening と closing が衝突す�
 
 // allowlist の全文字がデリミタとして使用できることを確認する
 test("normalizeOptions: allowlist の全文字がデリミタとして使用できる", () => {
-  const allowedChars = "!#%&()*+;<>?@^|~"
+  const allowedChars = "!#%&*+;<>?@^|~"
   for (const ch of allowedChars) {
     const result = normalizeOptions({ tags: [{ opening: ch, closing: ch }] })
     assert.deepStrictEqual(result.tags, [{ opening: ch, closing: ch }])

@@ -38,9 +38,17 @@ const headerPartArb = fc.oneof(
   fc.tuple(identArb, placeholderNameArb).map(([name, phName]) => ({ text: `${name}=$${phName}` })),
   fc.tuple(identArb, groupValueLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
 )
+/** グループ値の要素で使用禁止な type プロパティを持つかどうかを判定する */
+function hasReservedType(value: unknown): boolean {
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>
+    return record["type"] === "placeholder" || record["type"] === "group"
+  }
+  return false
+}
 /** グループ値の要素 arbitrary（解析結果比較用） */
 const groupValueElementArb = fc.oneof(
-  safeJsonValueArb,
+  safeJsonValueArb.filter((value) => !hasReservedType(value)),
   placeholderNameArb.map((name) => ({ type: "placeholder" as const, name })),
 )
 

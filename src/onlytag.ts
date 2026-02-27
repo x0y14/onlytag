@@ -482,6 +482,43 @@ function parseError(message: string, position: number): never {
   throw new Error(`${message}, position=${position}`)
 }
 
+/**
+ * PLACEHOLDER トークンをバリデーションし Placeholder オブジェクトを返す
+ * @param phToken - バリデーション対象の PLACEHOLDER トークン
+ * @param options - 正規化済みの機能オプション
+ * @returns バリデーション済みの Placeholder オブジェクト
+ * @throws {Error} placeholder が許可されていない、または形式が不正な場合
+ */
+function parsePlaceholder(phToken: Token, options: NormalizedOptions): Placeholder {
+  if (!options.allowPlaceholders) {
+    parseError(
+      `placeholders are not allowed: found placeholder "${phToken.value}"`,
+      phToken.position,
+    )
+  }
+  const raw = phToken.value
+  if (!raw.startsWith("$")) {
+    parseError(
+      `invalid placeholder: expected to start with "$", actual="${raw}"`,
+      phToken.position,
+    )
+  }
+  const name = raw.slice(1)
+  if (name.length === 0) {
+    parseError(
+      `invalid placeholder: name is empty in "${raw}"`,
+      phToken.position,
+    )
+  }
+  if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
+    parseError(
+      `invalid placeholder: name "${name}" contains invalid characters`,
+      phToken.position,
+    )
+  }
+  return { type: "placeholder", name }
+}
+
 // --- parse 本体 ---
 
 /**
@@ -553,34 +590,8 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
               expect("COMMA")
             }
             if (peek().kind === "PLACEHOLDER") {
-              if (!options.allowPlaceholders) {
-                parseError(
-                  `placeholders are not allowed: found placeholder "${peek().value}"`,
-                  peek().position,
-                )
-              }
               const phToken = advance()
-              const raw = phToken.value
-              if (!raw.startsWith("$")) {
-                parseError(
-                  `invalid placeholder: expected to start with "$", actual="${raw}"`,
-                  phToken.position,
-                )
-              }
-              const name = raw.slice(1)
-              if (name.length === 0) {
-                parseError(
-                  `invalid placeholder: name is empty in "${raw}"`,
-                  phToken.position,
-                )
-              }
-              if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
-                parseError(
-                  `invalid placeholder: name "${name}" contains invalid characters`,
-                  phToken.position,
-                )
-              }
-              groupValues.push({ type: "placeholder", name })
+              groupValues.push(parsePlaceholder(phToken, options))
             } else {
               const jsonToken = expect("JSON_VALUE")
               const parsed = decodeJsonString(jsonToken.value)
@@ -599,36 +610,8 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           const groupValue: GroupValue = { type: "group", values: groupValues }
           attributes[attrName] = groupValue
         } else if (peek().kind === "PLACEHOLDER") {
-          if (!options.allowPlaceholders) {
-            parseError(
-              `placeholders are not allowed: found placeholder "${peek().value}"`,
-              peek().position,
-            )
-          }
           const phToken = advance()
-          const raw = phToken.value
-          // validate placeholder token format: must start with "$" and have a valid name
-          if (!raw.startsWith("$")) {
-            parseError(
-              `invalid placeholder: expected to start with "$", actual="${raw}"`,
-              phToken.position,
-            )
-          }
-          const name = raw.slice(1)
-          if (name.length === 0) {
-            parseError(
-              `invalid placeholder: name is empty in "${raw}"`,
-              phToken.position,
-            )
-          }
-          if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
-            parseError(
-              `invalid placeholder: name "${name}" contains invalid characters`,
-              phToken.position,
-            )
-          }
-          const placeholder: Placeholder = { type: "placeholder", name }
-          attributes[attrName] = placeholder
+          attributes[attrName] = parsePlaceholder(phToken, options)
         } else {
           const jsonToken = expect("JSON_VALUE")
           const parsed = decodeJsonString(jsonToken.value)
