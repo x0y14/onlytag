@@ -426,6 +426,11 @@ function parseError(message: string, position: number): never {
 function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   const cursor = { value: 0 }
 
+  // ドキュメント全体でのタグ名ごとのデリミタペア追跡（allowMixedDelimiters 検査用）
+  const tagPairIndexMap = new Map<string, number>()
+  // ドキュメント全体でのタグ名ごとの自己閉じ追跡（allowInconsistentClosures 検査用）
+  const tagClosureMap = new Map<string, boolean>()
+
   function peek(): Token {
     return tokens[cursor.value]
   }
@@ -455,6 +460,19 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${tagName}>`,
         tagToken.position,
       )
+    }
+
+    // allowMixedDelimiters チェック: 同一タグ名を別デリミタペアで使用していないか確認
+    if (!options.allowMixedDelimiters && openPairIndex !== undefined) {
+      const seenPairIndex = tagPairIndexMap.get(tagName)
+      if (seenPairIndex === undefined) {
+        tagPairIndexMap.set(tagName, openPairIndex)
+      } else if (seenPairIndex !== openPairIndex) {
+        parseError(
+          `mixed delimiter pair for tag "${tagName}": first seen with pairIndex=${seenPairIndex}, now pairIndex=${openPairIndex}`,
+          openLtToken.position,
+        )
+      }
     }
 
     // デコレーションと属性
@@ -533,6 +551,18 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           slashGtToken.position,
         )
       }
+      // allowInconsistentClosures チェック: 以前 open/close で使われていないか確認
+      if (!options.allowInconsistentClosures) {
+        const seenSelfClosing = tagClosureMap.get(tagName)
+        if (seenSelfClosing === undefined) {
+          tagClosureMap.set(tagName, true)
+        } else if (!seenSelfClosing) {
+          parseError(
+            `inconsistent closure for tag "${tagName}": previously used as open/close, now used as self-closing`,
+            openLtToken.position,
+          )
+        }
+      }
       return {
         type: "element",
         tagName,
@@ -578,6 +608,19 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       )
     }
     expect("GT")
+
+    // allowInconsistentClosures チェック: 以前 self-closing で使われていないか確認
+    if (!options.allowInconsistentClosures) {
+      const seenSelfClosing = tagClosureMap.get(tagName)
+      if (seenSelfClosing === undefined) {
+        tagClosureMap.set(tagName, false)
+      } else if (seenSelfClosing) {
+        parseError(
+          `inconsistent closure for tag "${tagName}": previously used as self-closing, now used as open/close`,
+          openLtToken.position,
+        )
+      }
+    }
 
     return {
       type: "element",

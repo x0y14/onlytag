@@ -258,3 +258,100 @@ test("parser error: invalid json token payload fails in parse stage", () => {
   assert.match((error as Error).message, /invalid json attribute/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
+
+// --- allowMixedDelimiters ---
+
+// allowMixedDelimiters=false のとき、同一タグ名を別デリミタペアで使用するとエラーになることを確認する
+test("parser error: allowMixedDelimiters=false で同一タグ名を別デリミタで使うとエラー", () => {
+  const ot = new onlytag({
+    allowMixedDelimiters: false,
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "|", closing: "|" },
+    ],
+  })
+  // <tag /> で pairIndex=0 を登録した後、|tag/| で pairIndex=1 を使う
+  let error: unknown
+  try {
+    ot.parse(ot.tokenize("<tag />|tag/|"))
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /mixed delimiter pair/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// allowMixedDelimiters=true のとき、同一タグ名を別デリミタペアで使用しても成功することを確認する
+test("parser error: allowMixedDelimiters=true で同一タグ名を別デリミタで使っても成功", () => {
+  const ot = new onlytag({
+    allowMixedDelimiters: true,
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "|", closing: "|" },
+    ],
+  })
+  const tokens = ot.tokenize("<tag />|tag/|")
+  const doc = ot.parse(tokens)
+  assert.strictEqual(doc.type, "document")
+})
+
+// allowMixedDelimiters=false のとき、同一タグ名を同じデリミタで使うと成功することを確認する
+test("parser error: allowMixedDelimiters=false で同一タグ名を同じデリミタで使うと成功", () => {
+  const ot = new onlytag({
+    allowMixedDelimiters: false,
+    tags: [
+      { opening: "<", closing: ">" },
+      { opening: "|", closing: "|" },
+    ],
+  })
+  const tokens = ot.tokenize("<tag></tag><tag />")
+  const doc = ot.parse(tokens)
+  assert.strictEqual(doc.type, "document")
+})
+
+// --- allowInconsistentClosures ---
+
+// allowInconsistentClosures=false のとき、open/close → self-closing の順で使うとエラーになることを確認する
+test("parser error: allowInconsistentClosures=false で open/close の後に self-closing を使うとエラー", () => {
+  const ot = new onlytag({ allowInconsistentClosures: false })
+  let error: unknown
+  try {
+    ot.parse(ot.tokenize("<tag></tag><tag />"))
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /inconsistent closure/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// allowInconsistentClosures=false のとき、self-closing → open/close の順で使うとエラーになることを確認する
+test("parser error: allowInconsistentClosures=false で self-closing の後に open/close を使うとエラー", () => {
+  const ot = new onlytag({ allowInconsistentClosures: false })
+  let error: unknown
+  try {
+    ot.parse(ot.tokenize("<tag /><tag></tag>"))
+  } catch (caught) {
+    error = caught
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /inconsistent closure/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// allowInconsistentClosures=true のとき、open/close と self-closing を混在させても成功することを確認する
+test("parser error: allowInconsistentClosures=true で混在させても成功", () => {
+  const ot = new onlytag({ allowInconsistentClosures: true })
+  const tokens = ot.tokenize("<tag></tag><tag />")
+  const doc = ot.parse(tokens)
+  assert.strictEqual(doc.type, "document")
+})
+
+// allowInconsistentClosures=false のとき、同じ閉じ形式のみ使うと成功することを確認する
+test("parser error: allowInconsistentClosures=false で同じ閉じ形式のみなら成功", () => {
+  const ot = new onlytag({ allowInconsistentClosures: false })
+  const tokens = ot.tokenize("<tag /><tag />")
+  const doc = ot.parse(tokens)
+  assert.strictEqual(doc.type, "document")
+})

@@ -26,12 +26,16 @@ export const TagDelimiterPairSchema = z.object({
  * @param allowDecorations - decoration（.name）の使用を許可するか。省略時は true
  * @param allowAttributes - attribute（key=value）の使用を許可するか。省略時は true
  * @param allowPlaceholders - placeholder（key=$name）の使用を許可するか。省略時は true
+ * @param allowMixedDelimiters - 同一タグ名を別デリミタペアで再利用できるか。省略時は true
+ * @param allowInconsistentClosures - 同一タグ名を opening&closing と self-closing で使いまわせるか。省略時は true
  * @param tags - デリミタペアの配列。省略時は [{opening: "<", closing: ">"}]
  */
 export interface Options {
   allowDecorations?: boolean
   allowAttributes?: boolean
   allowPlaceholders?: boolean
+  allowMixedDelimiters?: boolean
+  allowInconsistentClosures?: boolean
   tags?: TagDelimiterPair[]
 }
 
@@ -42,6 +46,8 @@ export interface NormalizedOptions {
   allowDecorations: boolean
   allowAttributes: boolean
   allowPlaceholders: boolean
+  allowMixedDelimiters: boolean
+  allowInconsistentClosures: boolean
   tags: TagDelimiterPair[]
 }
 
@@ -50,6 +56,8 @@ export const NormalizedOptionsSchema = z.object({
   allowDecorations: z.boolean(),
   allowAttributes: z.boolean(),
   allowPlaceholders: z.boolean(),
+  allowMixedDelimiters: z.boolean(),
+  allowInconsistentClosures: z.boolean(),
   tags: z.array(TagDelimiterPairSchema).min(1),
 }).superRefine((data, ctx) => {
   try {
@@ -143,6 +151,8 @@ export function normalizeOptions(options?: Options): NormalizedOptions {
     allowDecorations: options?.allowDecorations ?? true,
     allowAttributes: options?.allowAttributes ?? true,
     allowPlaceholders: options?.allowPlaceholders ?? true,
+    allowMixedDelimiters: options?.allowMixedDelimiters ?? true,
+    allowInconsistentClosures: options?.allowInconsistentClosures ?? true,
     tags: [...tags],
   }
 }
