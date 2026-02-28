@@ -12,17 +12,11 @@ import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
-
-/** decoration・attribute などの名前のバリデーションパターン */
-const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
-/** タグ名のバリデーションパターン */
-const TAG_NAME_PATTERN = NAME_PATTERN
-/** プレースホルダー先頭文字のバリデーションパターン */
-const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
-/** プレースホルダー後続文字のバリデーションパターン */
-const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9_-]/
-/** プレースホルダー名のバリデーションパターン */
-const PLACEHOLDER_NAME_PATTERN = NAME_PATTERN
+import {
+  PLACEHOLDER_FIRST_CHAR_PATTERN,
+  PLACEHOLDER_CHAR_PATTERN,
+  isValidName,
+} from "./naming.js"
 
 // --- tokenize 内部ヘルパー ---
 
@@ -69,18 +63,7 @@ function isIdentStartChar(ch: string): boolean {
  * @returns 有効なタグ名であればtrue
  */
 function isValidTagName(name: string): boolean {
-  return TAG_NAME_PATTERN.test(name)
-}
-
-/**
- * 文字列が名前（tagname / decoration / attribute）の形式として有効かどうかを判定する
- * @param name - 判定対象の文字列
- * @returns 有効であればtrue
- */
-function isValidName(name: string): boolean {
-  // tokenize() already enforces this for normal markup input, but parse() also validates names so that it
-  // remains safe when called with externally constructed Token[].
-  return NAME_PATTERN.test(name)
+  return isValidName(name)
 }
 
 /**
@@ -542,8 +525,11 @@ function parsePlaceholder(phToken: Token, options: NormalizedOptions): Placehold
   if (name.length === 0) {
     parseError(`invalid placeholder: name is empty in "${raw}"`, phToken.position)
   }
-  if (!PLACEHOLDER_NAME_PATTERN.test(name)) {
-    parseError(`invalid placeholder: name "${name}" contains invalid characters`, phToken.position)
+  if (!isValidName(name)) {
+    parseError(
+      `invalid placeholder: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${name}>`,
+      phToken.position,
+    )
   }
   return { type: "placeholder", name }
 }
@@ -618,6 +604,9 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     // デコレーションと属性
     const decorations: Decoration[] = []
     const attributes: Record<string, AttributeValue> = {}
+
+    // tokenize() already enforces identifier shape for markup input, but we still validate names here so
+    // parse() remains safe when called with externally constructed Token[].
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
@@ -638,14 +627,17 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       } else {
         const attrToken = advance()
         const attrName = attrToken.value
+        if (!options.allowAttributes) {
+          parseError(
+            `attributes are not allowed: found attribute "${attrName}"`,
+            attrToken.position,
+          )
+        }
         if (!isValidName(attrName)) {
           parseError(
             `invalid attribute name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${attrName}>`,
             attrToken.position,
           )
-        }
-        if (!options.allowAttributes) {
-          parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         expect("EQUALS")
         if (peek().kind === "LPAREN") {

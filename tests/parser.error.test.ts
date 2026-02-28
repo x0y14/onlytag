@@ -216,7 +216,7 @@ test("parser error: placeholder token with invalid name characters fails", () =>
   }
 
   assert.instanceOf(error, Error)
-  assert.match((error as Error).message, /contains invalid characters/)
+  assert.match((error as Error).message, /invalid placeholder: expected=/)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
@@ -603,7 +603,7 @@ test("parser error: placeholder in group with invalid name characters fails", ()
   }
 
   assert.instanceOf(error, Error)
-  assert.match((error as Error).message, /contains invalid characters/)
+  assert.match((error as Error).message, /invalid placeholder: expected=/)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
