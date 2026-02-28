@@ -73,14 +73,30 @@ const mixedHeaderPartArb = fc.oneof(
     })),
 )
 
+/** 属性パーツから属性名を抽出する。deco の場合は null を返す */
+function extractAttrName(text: string): string | null {
+  if (text.startsWith(".")) return null
+  const eqIndex = text.indexOf("=")
+  return eqIndex >= 0 ? text.slice(0, eqIndex) : null
+}
+
 const selfClosingElementArb = fc
   .record({
     tag: tagNameArb,
     headerParts: fc.array(headerPartArb, { maxLength: 5 }),
   })
   .map(({ tag, headerParts }) => {
+    // 属性名の重複を除去する（deco は重複可能）
+    const seenAttrNames = new Set<string>()
+    const uniqueParts = headerParts.filter((part) => {
+      const name = extractAttrName(part.text)
+      if (name === null) return true
+      if (seenAttrNames.has(name)) return false
+      seenAttrNames.add(name)
+      return true
+    })
     const parts: string[] = [`<${tag}`]
-    for (const part of headerParts) parts.push(part.text)
+    for (const part of uniqueParts) parts.push(part.text)
     return `${parts.join(" ")} />`
   })
 
@@ -143,10 +159,22 @@ test("parse property: arbitrary input succeeds or fails with position hint", () 
 test("parse property: random attr and deco order is parsed correctly", () => {
   fc.assert(
     fc.property(
-      fc.record({
-        tag: tagNameArb,
-        parts: fc.array(mixedHeaderPartArb, { maxLength: 10 }),
-      }),
+      fc
+        .record({
+          tag: tagNameArb,
+          parts: fc.array(mixedHeaderPartArb, { maxLength: 10 }),
+        })
+        .map(({ tag, parts }) => {
+          // 属性名の重複を除去する（deco は重複可能）
+          const seenAttrNames = new Set<string>()
+          const uniqueParts = parts.filter((part) => {
+            if (part.kind === "deco") return true
+            if (seenAttrNames.has(part.name)) return false
+            seenAttrNames.add(part.name)
+            return true
+          })
+          return { tag, parts: uniqueParts }
+        }),
       ({ tag, parts }) => {
         const input = `<${tag} ${parts
           .map((part) => {

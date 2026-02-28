@@ -19,6 +19,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
     {
       allowDecorations: true,
@@ -27,6 +28,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
     {
       allowDecorations: true,
@@ -35,6 +37,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
     {
       allowDecorations: true,
@@ -43,6 +46,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
     {
       allowDecorations: false,
@@ -51,6 +55,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
     {
       allowDecorations: false,
@@ -59,6 +64,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
     {
       allowDecorations: false,
@@ -67,6 +73,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
     {
       allowDecorations: false,
@@ -75,6 +82,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
+      maxNestingDepth: 1024,
     },
   ]
 }

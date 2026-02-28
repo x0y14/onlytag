@@ -139,7 +139,64 @@ function readLiteralPreview(input: string, pos: number, closing: string): string
 }
 
 /**
- * 入力文字列からJSON値を読み取る。境界位置まで貪欲にマッチを試みる
+ * JSON文字列リテラルの終端位置をスキャンする。エスケープされた引用符を考慮する
+ * @param input - 入力文字列全体
+ * @param pos - 開始引用符の位置
+ * @returns 閉じ引用符の次の位置
+ * @throws {Error} 文字列が閉じられない場合
+ */
+function scanJsonString(input: string, pos: number): number {
+  const len = input.length
+  pos++ // 開始 " をスキップ
+  while (pos < len) {
+    const ch = input[pos]
+    if (ch === "\\") {
+      pos += 2 // エスケープシーケンスをスキップ
+      continue
+    }
+    if (ch === '"') {
+      return pos + 1 // 閉じ " の次の位置
+    }
+    pos++
+  }
+  tokenError("unterminated json string: expected=<closing quote>, actual=<eof>", pos)
+}
+
+/**
+ * JSON のオブジェクトまたは配列の終端位置をブラケットカウンティングでスキャンする。
+ * 文字列リテラル内の括弧はスキップする
+ * @param input - 入力文字列全体
+ * @param pos - 開始括弧（{ または [）の位置
+ * @returns 閉じ括弧の次の位置
+ * @throws {Error} 括弧が閉じられない場合
+ */
+function scanJsonBracket(input: string, pos: number): number {
+  const len = input.length
+  const openChar = input[pos]
+  const closeChar = openChar === "{" ? "}" : "]"
+  let depth = 1
+  pos++ // 開始括弧をスキップ
+  while (pos < len && depth > 0) {
+    const ch = input[pos]
+    if (ch === '"') {
+      pos = scanJsonString(input, pos)
+      continue
+    }
+    if (ch === openChar) {
+      depth++
+    } else if (ch === closeChar) {
+      depth--
+    }
+    pos++
+  }
+  if (depth > 0) {
+    tokenError(`unterminated json bracket: expected=<${closeChar}>, actual=<eof>`, pos)
+  }
+  return pos // 閉じ括弧の次の位置
+}
+
+/**
+ * 入力文字列からJSON値を読み取る。先頭文字に応じて終端を線形スキャンで特定し、JSON.parse を最大1回呼ぶ
  * @param input - 入力文字列全体
  * @param pos - 読み取り開始位置
  * @param closing - 現在のタグの閉じデリミタ文字
@@ -171,17 +228,38 @@ function readJsonValue(
     tokenError(`invalid json value start: expected=<json-start>, actual=<${input[pos]}>`, pos)
   }
 
-  let lastDecodeIssue = "invalid json"
-  for (let end = pos + 1; end <= len; end++) {
-    if (!isJsonBoundary(input, end, closing, extraBoundaries)) continue
-    const candidate = input.slice(pos, end)
-    const result = decodeJsonString(candidate)
-    if (result.success) {
-      return [candidate, end]
+  const startChar = input[pos]
+  let end: number
+
+  if (startChar === '"') {
+    // 文字列リテラル: 対応する閉じ引用符を線形スキャン
+    end = scanJsonString(input, pos)
+  } else if (startChar === "{" || startChar === "[") {
+    // オブジェクト/配列: ブラケットカウンティングで終端を特定
+    end = scanJsonBracket(input, pos)
+  } else {
+    // 数値・真偽値・null: 最初の境界位置まで読み進める
+    end = pos + 1
+    while (end < len && !isJsonBoundary(input, end, closing, extraBoundaries)) {
+      end++
     }
-    lastDecodeIssue = result.error.issues[0]?.message ?? "invalid json"
   }
 
+  // 構造化値（文字列・オブジェクト・配列）の直後が境界でなければエラー
+  if (!isJsonBoundary(input, end, closing, extraBoundaries)) {
+    tokenError(
+      `invalid json attribute value: expected=<boundary>, actual=<${input[end]}>`,
+      end,
+    )
+  }
+
+  const candidate = input.slice(pos, end)
+  const result = decodeJsonString(candidate)
+  if (result.success) {
+    return [candidate, end]
+  }
+
+  const lastDecodeIssue = result.error.issues[0]?.message ?? "invalid json"
   tokenError(
     `invalid json attribute value: expected=<valid-json>, actual=<${readLiteralPreview(input, pos, closing)}>, detail=<${lastDecodeIssue}>`,
     pos,
@@ -538,6 +616,9 @@ function parsePlaceholder(phToken: Token, options: NormalizedOptions): Placehold
 function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   const cursor = { value: 0 }
 
+  // ネスト深さカウンタ
+  let nestingDepth = 0
+
   // ドキュメント全体でのタグ名ごとのデリミタペア追跡（allowMixedDelimiters 検査用）
   const tagPairIndexMap = new Map<string, number>()
   // ドキュメント全体でのタグ名ごとの自己閉じ追跡（allowInconsistentClosures 検査用）
@@ -563,6 +644,14 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   }
 
   function parseElement(): ElementNode {
+    nestingDepth++
+    if (nestingDepth > options.maxNestingDepth) {
+      parseError(
+        `nesting depth exceeded: max=${options.maxNestingDepth}`,
+        peek().position,
+      )
+    }
+
     /** デリミタペアのインデックスを人間が読める文字列に変換する */
     const pairToStr = (idx: number) => {
       const pair = options.tags[idx]
@@ -624,6 +713,12 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         }
         if (!options.allowAttributes) {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
+        }
+        if (attrName in attributes) {
+          parseError(
+            `duplicate attribute: name="${attrName}"`,
+            attrToken.position,
+          )
         }
         expect("EQUALS")
         if (peek().kind === "LPAREN") {
@@ -698,6 +793,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           )
         }
       }
+      nestingDepth--
       return {
         type: "element",
         tagName,
@@ -761,6 +857,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       }
     }
 
+    nestingDepth--
     return {
       type: "element",
       tagName,

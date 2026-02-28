@@ -42,6 +42,7 @@ export const TagDelimiterPairSchema = z.object({
  * @param allowMixedDelimiters - 同一タグ名を別デリミタペアで再利用できるか。省略時は true
  * @param allowInconsistentClosures - 同一タグ名を opening&closing と self-closing で使いまわせるか。省略時は true
  * @param tags - デリミタペアの配列。省略時は [{opening: "<", closing: ">"}]
+ * @param maxNestingDepth - 要素のネスト深さの上限。省略時は 1024
  */
 export interface Options {
   allowDecorations?: boolean
@@ -50,6 +51,7 @@ export interface Options {
   allowMixedDelimiters?: boolean
   allowInconsistentClosures?: boolean
   tags?: TagDelimiterPair[]
+  maxNestingDepth?: number
 }
 
 /**
@@ -62,6 +64,7 @@ export interface NormalizedOptions {
   allowMixedDelimiters: boolean
   allowInconsistentClosures: boolean
   tags: TagDelimiterPair[]
+  maxNestingDepth: number
 }
 
 /** NormalizedOptions の Zod スキーマ */
@@ -73,6 +76,7 @@ export const NormalizedOptionsSchema = z
     allowMixedDelimiters: z.boolean(),
     allowInconsistentClosures: z.boolean(),
     tags: z.array(TagDelimiterPairSchema).min(1),
+    maxNestingDepth: z.number().int().positive(),
   })
   .superRefine((data, ctx) => {
     try {
@@ -169,5 +173,6 @@ export function normalizeOptions(options?: Options): NormalizedOptions {
     allowMixedDelimiters: options?.allowMixedDelimiters ?? true,
     allowInconsistentClosures: options?.allowInconsistentClosures ?? true,
     tags: [...tags],
+    maxNestingDepth: options?.maxNestingDepth ?? 1024,
   }
 }

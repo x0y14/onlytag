@@ -13,6 +13,7 @@ test("normalizeOptions: undefined はデフォルト値を返す", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -26,6 +27,7 @@ test("normalizeOptions: 空オブジェクトはデフォルト値を返す", ()
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -39,6 +41,7 @@ test("normalizeOptions: allowDecorations のみ指定", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -52,6 +55,7 @@ test("normalizeOptions: allowAttributes のみ指定", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -65,6 +69,7 @@ test("normalizeOptions: allowPlaceholders のみ指定", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -81,6 +86,7 @@ test("normalizeOptions: 両方 false を指定", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -98,6 +104,7 @@ test("normalizeOptions: 全て false を指定", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -114,6 +121,7 @@ test("normalizeOptions: 両方 true を明示指定", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -289,6 +297,7 @@ test("normalizeOptions: allowMixedDelimiters のみ指定", () => {
     allowMixedDelimiters: false,
     allowInconsistentClosures: true,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -310,6 +319,7 @@ test("normalizeOptions: allowInconsistentClosures のみ指定", () => {
     allowMixedDelimiters: true,
     allowInconsistentClosures: false,
     tags: defaultTags,
+    maxNestingDepth: 1024,
   })
 })
 
@@ -317,4 +327,24 @@ test("normalizeOptions: allowInconsistentClosures のみ指定", () => {
 test("normalizeOptions: allowInconsistentClosures デフォルトは true", () => {
   const result = normalizeOptions({})
   assert.strictEqual(result.allowInconsistentClosures, true)
+})
+
+// --- maxNestingDepth ---
+
+// maxNestingDepth のデフォルトは 1024 であることを確認する
+test("normalizeOptions: maxNestingDepth デフォルトは 1024", () => {
+  const result = normalizeOptions({})
+  assert.strictEqual(result.maxNestingDepth, 1024)
+})
+
+// maxNestingDepth をカスタム値で指定できることを確認する
+test("normalizeOptions: maxNestingDepth をカスタム値で指定", () => {
+  const result = normalizeOptions({ maxNestingDepth: 256 })
+  assert.strictEqual(result.maxNestingDepth, 256)
+})
+
+// maxNestingDepth が未指定の場合はデフォルト値が使用されることを確認する
+test("normalizeOptions: maxNestingDepth 未指定はデフォルト値を返す", () => {
+  const result = normalizeOptions(undefined)
+  assert.strictEqual(result.maxNestingDepth, 1024)
 })

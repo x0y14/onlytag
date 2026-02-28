@@ -590,3 +590,20 @@ test("parser error: invalid json token in group fails", () => {
   assert.match((error as Error).message, /invalid json attribute/i)
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
+
+// --- 属性キー重複 ---
+
+// JSON値の属性キーが重複する場合にparse段で失敗することを確認する
+test("parser error: duplicate attribute key with json values fails", () => {
+  expectParserErrorWithPosition('<A x=1 x=2 />')
+})
+
+// placeholder属性キーが重複する場合にparse段で失敗することを確認する
+test("parser error: duplicate attribute key with placeholder fails", () => {
+  expectParserErrorWithPosition('<A x=$foo x=$bar />')
+})
+
+// グループ値の属性キーが重複する場合にparse段で失敗することを確認する
+test("parser error: duplicate attribute key with group value fails", () => {
+  expectParserErrorWithPosition('<A x=(1,2) x=(3,4) />')
+})

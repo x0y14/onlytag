@@ -51,6 +51,28 @@ test("performance: parse scales near linearly with input size", () => {
   assert.isBelow(timeRatio, inputRatio * 2.5)
 })
 
+// 空白を大量に含むJSON値のtokenizeが線形時間で処理されることを確認する
+test("performance: tokenize with whitespace-heavy JSON scales linearly", () => {
+  const buildWhitespaceJson = (spaces: number): string => {
+    const padding = " ".repeat(spaces)
+    return `<A value={"a"${padding}:${padding}1} />`
+  }
+
+  const smallInput = buildWhitespaceJson(5_000)
+  const largeInput = buildWhitespaceJson(50_000)
+
+  const smallMs = measureMs(() => {
+    ot.tokenize(smallInput)
+  }, 10)
+  const largeMs = measureMs(() => {
+    ot.tokenize(largeInput)
+  }, 10)
+
+  const inputRatio = largeInput.length / smallInput.length
+  const timeRatio = largeMs / Math.max(smallMs, 0.1)
+  assert.isBelow(timeRatio, inputRatio * 3.0)
+})
+
 // 10,000タグ規模でも上限時間内に処理できることを確認する
 test("performance: parses 10k tags within time budget", () => {
   const hugeInput = buildFlatDocument(10_000)

@@ -60,10 +60,25 @@ const decoOnlyInputArb = fc
   .tuple(tagNameArb, fc.array(decorationArb, { minLength: 1, maxLength: 3 }))
   .map(([tag, decos]) => `<${tag} ${decos.join(" ")} />`)
 
+/**
+ * 属性文字列配列から属性名の重複を除去する。
+ * 属性文字列は "key=value" 形式を想定する
+ */
+function deduplicateAttrs(attrs: string[]): string[] {
+  const seen = new Set<string>()
+  return attrs.filter((attr) => {
+    const key = attr.slice(0, attr.indexOf("="))
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 /** カテゴリ C: attribute のみ */
 const attrOnlyInputArb = fc
   .tuple(tagNameArb, fc.array(attributeArb, { minLength: 1, maxLength: 3 }))
-  .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
+  .filter(([, attrs]) => deduplicateAttrs(attrs).length >= 1)
+  .map(([tag, attrs]) => `<${tag} ${deduplicateAttrs(attrs).join(" ")} />`)
 
 /** カテゴリ D: 両方 */
 const bothInputArb = fc
@@ -72,12 +87,14 @@ const bothInputArb = fc
     fc.array(decorationArb, { minLength: 1, maxLength: 2 }),
     fc.array(attributeArb, { minLength: 1, maxLength: 2 }),
   )
-  .map(([tag, decos, attrs]) => `<${tag} ${decos.join(" ")} ${attrs.join(" ")} />`)
+  .filter(([, , attrs]) => deduplicateAttrs(attrs).length >= 1)
+  .map(([tag, decos, attrs]) => `<${tag} ${decos.join(" ")} ${deduplicateAttrs(attrs).join(" ")} />`)
 
 /** カテゴリ E: placeholder のみ */
 const placeholderOnlyInputArb = fc
   .tuple(tagNameArb, fc.array(placeholderAttributeArb, { minLength: 1, maxLength: 3 }))
-  .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
+  .filter(([, attrs]) => deduplicateAttrs(attrs).length >= 1)
+  .map(([tag, attrs]) => `<${tag} ${deduplicateAttrs(attrs).join(" ")} />`)
 
 // カテゴリ A はどのモードでも成功することを確認する
 test("options property: カテゴリ A はどのモードでも成功する", () => {
@@ -172,7 +189,8 @@ test("options property: カテゴリ E は allowAttributes=true かつ allowPlac
 /** カテゴリ F: グループ値（placeholder を含む） */
 const groupWithPlaceholderInputArb = fc
   .tuple(tagNameArb, fc.array(groupWithPlaceholderAttributeArb, { minLength: 1, maxLength: 2 }))
-  .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
+  .filter(([, attrs]) => deduplicateAttrs(attrs).length >= 1)
+  .map(([tag, attrs]) => `<${tag} ${deduplicateAttrs(attrs).join(" ")} />`)
 
 test("options property: カテゴリ F（グループ値 + placeholder）は allowAttributes=true かつ allowPlaceholders=true でのみ成功する", () => {
   fc.assert(
@@ -197,7 +215,8 @@ test("options property: カテゴリ F（グループ値 + placeholder）は all
 /** カテゴリ G: グループ値（JSON のみ） */
 const groupJsonOnlyInputArb = fc
   .tuple(tagNameArb, fc.array(groupJsonOnlyAttributeArb, { minLength: 1, maxLength: 2 }))
-  .map(([tag, attrs]) => `<${tag} ${attrs.join(" ")} />`)
+  .filter(([, attrs]) => deduplicateAttrs(attrs).length >= 1)
+  .map(([tag, attrs]) => `<${tag} ${deduplicateAttrs(attrs).join(" ")} />`)
 
 test("options property: カテゴリ G（グループ値 JSON のみ）は allowAttributes=true でのみ成功する", () => {
   fc.assert(

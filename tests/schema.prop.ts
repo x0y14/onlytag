@@ -412,6 +412,7 @@ test("schema normalized feature options: accepts valid options", () => {
           allowMixedDelimiters,
           allowInconsistentClosures,
           tags,
+          maxNestingDepth: 1024,
         })
         assert.isTrue(result.success)
       },

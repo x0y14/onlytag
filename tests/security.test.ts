@@ -49,6 +49,8 @@ test("security: __proto__ payload does not cause prototype pollution", () => {
   const doc = ot.parse(ot.tokenize('<A payload={"__proto__":{"polluted":"yes"},"safe":1} />'))
   const payload = doc.children[0].attributes["payload"]
   assert.deepStrictEqual(payload, { safe: 1 })
+  // __proto__ が own property として存在しないことを明示的に検証する
+  assert.isFalse(Object.prototype.hasOwnProperty.call(payload, "__proto__"))
   assert.isUndefined(({} as { polluted?: string }).polluted)
 })
 
@@ -56,6 +58,28 @@ test("security: __proto__ payload does not cause prototype pollution", () => {
 test("security: html-like payload is treated as plain string", () => {
   const doc = ot.parse(ot.tokenize('<A content="</script><img src=x onerror=alert(1)>" />'))
   assert.equal(doc.children[0].attributes["content"], "</script><img src=x onerror=alert(1)>")
+})
+
+// デフォルトのmaxNestingDepthを超えるネスト入力でposition付きのエラーが発生することを確認する
+test("security: excessive nesting depth produces controlled error", () => {
+  const depth = 2000
+  const open = Array.from({ length: depth }, () => "<A>").join("")
+  const close = Array.from({ length: depth }, () => "</A>").join("")
+  const input = `${open}<Leaf />${close}`
+
+  let error: unknown
+  try {
+    ot.parse(ot.tokenize(input))
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing security error: expected=<Error>, actual=<no-throw>")
+  }
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /nesting depth/)
+  assert.match((error as Error).message, /position=/)
 })
 
 // --- マルチバイト文字テスト ---
