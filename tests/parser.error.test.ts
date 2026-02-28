@@ -50,14 +50,23 @@ test("parser error: eof before closing tag fails", () => {
   expectParserErrorWithPosition("<A>")
 })
 
-// タグ名にアンダースコアを含む入力は失敗することを確認する
-test("parser error: tag name with underscore fails", () => {
-  expectParserErrorWithPosition("<A_b />")
+// タグ名にアンダースコアを含む入力は成功することを確認する
+test("parser error: tag name with underscore succeeds", () => {
+  const ot2 = new onlytag()
+  const doc = ot2.parse(ot2.tokenize("<A_b />"))
+  assert.strictEqual(doc.children[0].tagName, "A_b")
 })
 
-// 閉じタグ名にアンダースコアを含む入力は失敗することを確認する
-test("parser error: closing tag name with underscore fails", () => {
-  expectParserErrorWithPosition("<A></A_b>")
+// 閉じタグ名にアンダースコアを含む入力は成功することを確認する
+test("parser error: closing tag name with underscore succeeds", () => {
+  const ot2 = new onlytag()
+  const doc = ot2.parse(ot2.tokenize("<A_b></A_b>"))
+  assert.strictEqual(doc.children[0].tagName, "A_b")
+})
+
+// タグ名が先頭アンダースコアの入力は失敗することを確認する
+test("parser error: tag name starting with underscore fails", () => {
+  expectParserErrorWithPosition("<_Tag />")
 })
 
 // タグ名が数字で始まる入力は失敗することを確認する
