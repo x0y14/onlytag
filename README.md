@@ -66,7 +66,7 @@ A tag is the fundamental unit of structure. There are three forms:
 | Closing | `</TagName>` | Ends the matching opening tag |
 | Self-closing | `<TagName />` | A complete element with no children |
 
-When parsing markup via `tokenize`/`parse`, tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive. When deserializing a pre-built AST via `load()`, tag name validation is slightly more permissive and accepts names matching `[A-Za-z0-9_-]+`.
+When parsing markup via `tokenize`/`parse`, tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive.
 
 A document can have multiple top-level tags:
 
@@ -269,7 +269,7 @@ By disabling placeholders and inconsistent closures, you ensure a stricter, more
 
 ## Serialization
 
-The `onlytag` class provides `dump` and `load` for JSON serialization of the AST:
+The `onlytag` class provides `dump` for JSON serialization of the AST:
 
 ```ts
 const ot = new onlytag()
@@ -279,12 +279,9 @@ const doc = ot.parse(ot.tokenize(`<Button .primary text="Click me" />`))
 
 // Serialize to JSON string
 const json = ot.dump(doc)
-
-// Deserialize back to DocumentNode (validates against schema)
-const restored = ot.load(json)
 ```
 
-`dump` calls `JSON.stringify` on the `DocumentNode`. `load` parses the JSON string and validates it against the `DocumentNode` schema using [zod](https://github.com/colinhacks/zod). If the JSON is malformed or does not match the schema, `load` throws an error.
+`dump` calls `JSON.stringify` on the `DocumentNode`.
 
 ## Limitations
 

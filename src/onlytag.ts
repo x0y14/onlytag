@@ -8,7 +8,6 @@ import type {
   GroupValue,
   AttributeValue,
 } from "./ast.js"
-import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
@@ -805,23 +804,4 @@ export class onlytag {
     return JSON.stringify(doc)
   }
 
-  /**
-   * JSON 文字列をパースしてドキュメントノードを返す
-   * @param json - JSON 文字列
-   * @returns ドキュメントノード
-   * @throws {Error} JSON が不正、またはドキュメントノードのスキーマに合致しない場合
-   */
-  load(json: string): DocumentNode {
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(json)
-    } catch (e) {
-      throw new Error(`invalid json: ${e instanceof Error ? e.message : String(e)}`)
-    }
-    const result = DocumentNodeSchema.safeParse(parsed)
-    if (!result.success) {
-      throw new Error(`invalid document node: ${result.error.message}`)
-    }
-    return result.data
-  }
 }

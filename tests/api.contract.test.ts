@@ -60,7 +60,6 @@ test("api contract: exports onlytag class", () => {
   assert.isFunction(ot.tokenize)
   assert.isFunction(ot.parse)
   assert.isFunction(ot.dump)
-  assert.isFunction(ot.load)
 })
 
 // Options 関連の export を確認する
@@ -92,63 +91,6 @@ test("api contract: dump serializes document node to json string", () => {
   assert.equal(parsed.children[0].tagName, "A")
   assert.equal(parsed.children[0].decorations[0].name, "bold")
   assert.equal(parsed.children[0].attributes.text, "hello")
-})
-
-// load で JSON 文字列をドキュメントノードにデシリアライズできることを確認する
-test("api contract: load deserializes json string to document node", () => {
-  const ot = new onlytag()
-  const json = JSON.stringify({
-    type: "document",
-    children: [
-      {
-        type: "element",
-        tagName: "A",
-        decorations: [],
-        attributes: { x: 1 },
-        children: [],
-        selfClosing: true,
-      },
-    ],
-  })
-  const doc = ot.load(json)
-  assert.equal(doc.type, "document")
-  assert.equal(doc.children.length, 1)
-  assert.equal(doc.children[0].tagName, "A")
-  assert.equal(doc.children[0].attributes.x, 1)
-})
-
-// dump -> load のラウンドトリップが元の値を復元できることを確認する
-test("api contract: dump and load are inverse operations (round-trip)", () => {
-  const ot = new onlytag()
-  const doc = ot.parse(ot.tokenize('<A .bold text="hello"><B /></A>'))
-  const json = ot.dump(doc)
-  const loaded = ot.load(json)
-  assert.deepEqual(loaded, doc)
-})
-
-// load で不正な JSON を渡すとエラーになることを確認する
-test("api contract: load throws on invalid json", () => {
-  const ot = new onlytag()
-  assert.throws(() => ot.load("not json"), /invalid json/)
-})
-
-// load でスキーマに合致しない JSON を渡すとエラーになることを確認する
-test("api contract: load throws on json not matching document node schema", () => {
-  const ot = new onlytag()
-  assert.throws(() => ot.load('{"type":"unknown"}'), /invalid document node/)
-})
-
-// placeholder を含む dump/load ラウンドトリップが元の値を復元できることを確認する
-test("api contract: dump and load round-trip preserves placeholder", () => {
-  const ot = new onlytag()
-  const doc = ot.parse(ot.tokenize("<A attr=$myValue />"))
-  const json = ot.dump(doc)
-  const loaded = ot.load(json)
-  assert.deepEqual(loaded, doc)
-  assert.deepStrictEqual(loaded.children[0].attributes["attr"], {
-    type: "placeholder",
-    name: "myValue",
-  })
 })
 
 // PlaceholderSchema が有効な placeholder を受理することを確認する
