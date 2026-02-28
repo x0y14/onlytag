@@ -86,11 +86,18 @@ const selfClosingElementArb = fc
     headerParts: fc.array(headerPartArb, { maxLength: 5 }),
   })
   .map(({ tag, headerParts }) => {
-    // 属性名の重複を除去する（deco は重複可能）
+    // 属性名・デコレーション名の重複を除去する
     const seenAttrNames = new Set<string>()
+    const seenDecoNames = new Set<string>()
     const uniqueParts = headerParts.filter((part) => {
       const name = extractAttrName(part.text)
-      if (name === null) return true
+      if (name === null) {
+        // decoration: extract name after dot
+        const decoName = part.text.slice(1)
+        if (seenDecoNames.has(decoName)) return false
+        seenDecoNames.add(decoName)
+        return true
+      }
       if (seenAttrNames.has(name)) return false
       seenAttrNames.add(name)
       return true
@@ -165,10 +172,15 @@ test("parse property: random attr and deco order is parsed correctly", () => {
           parts: fc.array(mixedHeaderPartArb, { maxLength: 10 }),
         })
         .map(({ tag, parts }) => {
-          // 属性名の重複を除去する（deco は重複可能）
+          // 属性名・デコレーション名の重複を除去する
           const seenAttrNames = new Set<string>()
+          const seenDecoNames = new Set<string>()
           const uniqueParts = parts.filter((part) => {
-            if (part.kind === "deco") return true
+            if (part.kind === "deco") {
+              if (seenDecoNames.has(part.name)) return false
+              seenDecoNames.add(part.name)
+              return true
+            }
             if (seenAttrNames.has(part.name)) return false
             seenAttrNames.add(part.name)
             return true
@@ -195,7 +207,7 @@ test("parse property: random attr and deco order is parsed correctly", () => {
         const doc = ot.parse(ot.tokenize(input))
         assert.equal(doc.children.length, 1)
         assert.deepStrictEqual(
-          doc.children[0].decorations.map((deco) => deco.name),
+          doc.children[0].decorations,
           parts.filter((part) => part.kind === "deco").map((part) => part.name),
         )
         const expectedAttributes: Record<string, unknown> = {}

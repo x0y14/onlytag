@@ -89,7 +89,7 @@ test("api contract: dump serializes document node to json string", () => {
   assert.equal(parsed.type, "document")
   assert.equal(parsed.children.length, 1)
   assert.equal(parsed.children[0].name, "A")
-  assert.equal(parsed.children[0].decorations[0].name, "bold")
+  assert.equal(parsed.children[0].decorations[0], "bold")
   assert.equal(parsed.children[0].attributes.text, "hello")
 })
 
