@@ -183,6 +183,7 @@ The `onlytag` constructor accepts an optional `Options` object to control which 
 | `allowMixedDelimiters` | `boolean` | `true` | Allow the same tag name to use different delimiter pairs |
 | `allowInconsistentClosures` | `boolean` | `true` | Allow a tag name to be used as both self-closing and open/close |
 | `tags` | `TagDelimiterPair[]` | `[{ opening: "<", closing: ">" }]` | Active delimiter pairs |
+| `maxNestingDepth` | `number` | `1024` | Maximum nesting depth for elements |
 
 When an option is set to `false`, using the corresponding feature throws an error.
 
