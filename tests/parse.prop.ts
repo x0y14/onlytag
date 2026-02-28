@@ -8,11 +8,11 @@ function hasPositionHint(message: string): boolean {
   return /position|pos|index|offset/i.test(message)
 }
 
-const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/)
-const tagNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+const identArb = fc.stringMatching(/^[A-Za-z][A-Za-z0-9_-]{0,9}$/)
+const tagNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]{0,9}$/)
 const safeIdentArb = identArb.filter((value) => value !== "__proto__")
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
-const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]{0,9}$/)
 function hasProtoKey(value: unknown): boolean {
   if (Array.isArray(value)) return value.some((item) => hasProtoKey(item))
   if (value !== null && typeof value === "object") {

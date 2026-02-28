@@ -13,14 +13,14 @@ import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 
-/** タグ名のバリデーションパターン */
-const TAG_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+/** 名前のバリデーションパターン（タグ名・デコレーション名・属性名・プレースホルダー名に共通） */
+const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 /** プレースホルダー先頭文字のバリデーションパターン */
 const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
 /** プレースホルダー後続文字のバリデーションパターン */
-const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9-]/
+const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9_-]/
 /** プレースホルダー名のバリデーションパターン */
-const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+const PLACEHOLDER_NAME_PATTERN = NAME_PATTERN
 
 // --- tokenize 内部ヘルパー ---
 
@@ -50,12 +50,12 @@ function isIdentChar(ch: string): boolean {
 }
 
 /**
- * 文字列がタグ名として有効かどうかを判定する（[a-zA-Z][a-zA-Z0-9-]*）
+ * 文字列が有効な名前かどうかを判定する（[a-zA-Z][a-zA-Z0-9_-]*）
  * @param name - 判定対象の文字列
- * @returns 有効なタグ名であればtrue
+ * @returns 有効な名前であればtrue
  */
 function isValidTagName(name: string): boolean {
-  return TAG_NAME_PATTERN.test(name)
+  return NAME_PATTERN.test(name)
 }
 
 /**
@@ -183,7 +183,7 @@ function readJsonValue(
 }
 
 /**
- * 入力文字列から placeholder を読み取る。$[a-zA-Z][a-zA-Z0-9-]* の形式
+ * 入力文字列から placeholder を読み取る。$[a-zA-Z][a-zA-Z0-9_-]* の形式
  * @param input - 入力文字列全体
  * @param pos - 読み取り開始位置（$ の位置）
  * @returns ドル記号を含む placeholder 文字列と読み取り後の位置のタプル
@@ -197,7 +197,10 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
 
   if (pos >= len || !PLACEHOLDER_FIRST_CHAR_PATTERN.test(input[pos])) {
     const actual = pos < len ? input[pos] : "<eof>"
-    tokenError(`invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9-]*>, actual=<$${actual}>`, start)
+    tokenError(
+      `invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9_-]*>, actual=<$${actual}>`,
+      start,
+    )
   }
 
   while (pos < len && PLACEHOLDER_CHAR_PATTERN.test(input[pos])) pos++
@@ -410,7 +413,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         } else {
           const actual = pos < len ? `.${input[pos]}` : ".<eof>"
           tokenError(
-            `invalid decoration token: expected=<.[A-Za-z0-9_-]+>, actual=<${actual}>`,
+            `invalid decoration token: expected=<.[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${actual}>`,
             start,
           )
         }
@@ -563,7 +566,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     const tagName = tagToken.value
     if (!isValidTagName(tagName)) {
       parseError(
-        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${tagName}>`,
+        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${tagName}>`,
         tagToken.position,
       )
     }
@@ -593,11 +596,25 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           )
         }
         const deco = advance()
-        decorations.push({ name: deco.value.slice(1) })
+        const decoName = deco.value.slice(1)
+        if (!isValidTagName(decoName)) {
+          parseError(
+            `invalid decoration name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${decoName}>`,
+            deco.position,
+          )
+        }
+        decorations.push({ name: decoName })
       } else {
-        const attrName = advance().value
+        const attrToken = advance()
+        const attrName = attrToken.value
+        if (!isValidTagName(attrName)) {
+          parseError(
+            `invalid attribute name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${attrName}>`,
+            attrToken.position,
+          )
+        }
         if (!options.allowAttributes) {
-          parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
+          parseError(`attributes are not allowed: found attribute "${attrName}"`, attrToken.position)
         }
         expect("EQUALS")
         if (peek().kind === "LPAREN") {
@@ -700,7 +717,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     const closeTag = expect("IDENT")
     if (!isValidTagName(closeTag.value)) {
       parseError(
-        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${closeTag.value}>`,
+        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${closeTag.value}>`,
         closeTag.position,
       )
     }

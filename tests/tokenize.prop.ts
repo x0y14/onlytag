@@ -24,7 +24,7 @@ function expectTokenizerErrorWithPosition(input: string): void {
   assert.isTrue(hasPositionHint((error as Error).message))
 }
 
-const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/)
+const identArb = fc.stringMatching(/^[A-Za-z][A-Za-z0-9_-]{0,9}$/)
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
 const invalidJsonLiteralArb = fc.oneof(
   fc.constantFrom("", "-", "tru", "fals", "nul", '"unterminated', "{", "[", "1e", "01"),
@@ -128,7 +128,7 @@ test("tokenize property: invalid attributes are rejected", () => {
 
 // 有効なグループ値属性を含むタグは LPAREN/RPAREN トークンを生成することを確認する
 test("tokenize property: valid group attribute produces LPAREN and RPAREN tokens", () => {
-  const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+  const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]{0,9}$/)
   const groupItemArb = fc.oneof(
     jsonLiteralArb,
     placeholderNameArb.map((name) => `$${name}`),
@@ -153,7 +153,7 @@ test("tokenize property: valid group attribute produces LPAREN and RPAREN tokens
 
 // 有効な placeholder 属性を含むタグは PLACEHOLDER トークンを生成することを確認する
 test("tokenize property: valid placeholder attribute produces PLACEHOLDER token", () => {
-  const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+  const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]{0,9}$/)
   fc.assert(
     fc.property(identArb, identArb, placeholderNameArb, (tag, attrName, phName) => {
       const input = `<${tag} ${attrName}=$${phName} />`

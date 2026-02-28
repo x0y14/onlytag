@@ -255,6 +255,15 @@ test("parser: parses placeholder with hyphen in name", () => {
   })
 })
 
+// placeholder 名にアンダースコアを含む場合も解析できることを確認する
+test("parser: parses placeholder with underscore in name", () => {
+  const doc = ot.parse(ot.tokenize("<A x=$my_value />"))
+  assert.deepStrictEqual(doc.children[0].attributes["x"], {
+    type: "placeholder",
+    name: "my_value",
+  })
+})
+
 // JSON 値と placeholder が混在する属性を解析できることを確認する
 test("parser: parses mixed json and placeholder attributes", () => {
   const doc = ot.parse(ot.tokenize("<A .deco json={} ph=$abc />"))

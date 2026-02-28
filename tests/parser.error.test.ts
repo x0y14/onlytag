@@ -50,19 +50,34 @@ test("parser error: eof before closing tag fails", () => {
   expectParserErrorWithPosition("<A>")
 })
 
-// タグ名にアンダースコアを含む入力は失敗することを確認する
-test("parser error: tag name with underscore fails", () => {
-  expectParserErrorWithPosition("<A_b />")
+// タグ名にアンダースコアを含む入力は成功することを確認する
+test("parser: tag name with underscore succeeds", () => {
+  const doc = ot.parse(ot.tokenize("<A_b />"))
+  assert.strictEqual(doc.type, "document")
+  assert.equal(doc.children[0].tagName, "A_b")
 })
 
-// 閉じタグ名にアンダースコアを含む入力は失敗することを確認する
-test("parser error: closing tag name with underscore fails", () => {
-  expectParserErrorWithPosition("<A></A_b>")
+// 閉じタグ名にアンダースコアを含む入力は成功することを確認する
+test("parser: closing tag name with underscore succeeds", () => {
+  const doc = ot.parse(ot.tokenize("<A_b><Child /></A_b>"))
+  assert.strictEqual(doc.type, "document")
+  assert.equal(doc.children[0].tagName, "A_b")
+  assert.equal(doc.children[0].children[0].tagName, "Child")
 })
 
 // タグ名が数字で始まる入力は失敗することを確認する
 test("parser error: tag name starting with digit fails", () => {
   expectParserErrorWithPosition("<1Tag />")
+})
+
+// decoration 名が数字で始まる入力は失敗することを確認する
+test("parser error: decoration name starting with digit fails", () => {
+  expectParserErrorWithPosition("<A .1hot />")
+})
+
+// attribute 名が数字で始まる入力は失敗することを確認する
+test("parser error: attribute name starting with digit fails", () => {
+  expectParserErrorWithPosition("<A 1hot=1 />")
 })
 test("parser error: missing equals before decoration fails", () => {
   let error: unknown
