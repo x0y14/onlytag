@@ -1,62 +1,27 @@
 # onlytag
 
-onlytag is a simple markup with three kinds of tags, JSON attributes, and decorations.
+A tag-only markup language parser for TypeScript. No raw text, no rendering — just structured parsing into a typed AST.
 
-Unlike HTML, you cannot write raw text directly.
-
-## Syntax
-
-- Tags
-  - Opening: `<tagname>`
-  - Closing: `</tagname>`
-  - Self-closing: `<tagname />`
-- Attributes
-  - Must be valid JSON: `data={ "key": "value" }` `url="https://..."` `level=1` `num=[1,2,3]` ...
-- Decoration
-  - Starts with a dot (e.g., `.deco` `.primary` `.title` `._hidden`)
-
----
-
-- Allowed characters
-  - Tag names, attribute names, and decoration names may contain only digits, letters (A–Z, a–z), `_`, and `-`.
-- Whitespace
-  - All whitespace is ignored.
-
-## Usage
-
-### Install
+## Install
 
 ```sh
 npm install onlytag
 ```
 
-### Basic
+The package is distributed as an ES module.
+
+## Quick Start
 
 ```ts
-import { tokenize, parse } from "onlytag"
+import { onlytag } from "onlytag"
 
-const input = `<Button .primary text="Click me" />`
+const ot = new onlytag()
 
-const tokens = tokenize(input)
-const ast = parse(tokens)
+const tokens = ot.tokenize(`<Button .primary text="Click me" />`)
+const doc = ot.parse(tokens)
 ```
 
-Output: `tokenize()`
-
-```json
-[
-  { "kind": "LT", "value": "<", "position": 0 },
-  { "kind": "IDENT", "value": "Button", "position": 1 },
-  { "kind": "DOT_IDENT", "value": ".primary", "position": 8 },
-  { "kind": "IDENT", "value": "text", "position": 17 },
-  { "kind": "EQUALS", "value": "=", "position": 21 },
-  { "kind": "JSON_VALUE", "value": "\"Click me\"", "position": 22 },
-  { "kind": "SLASH_GT", "value": "/>", "position": 33 },
-  { "kind": "EOF", "value": "", "position": 35 }
-]
-```
-
-Output: `parse()`
+`doc` is a `DocumentNode`:
 
 ```json
 {
@@ -74,65 +39,260 @@ Output: `parse()`
 }
 ```
 
-### Serialization (AST ↔ JSON)
+## How It Differs from HTML and XML
+
+| Aspect | HTML | XML | onlytag |
+|---|---|---|---|
+| Raw text between tags | Allowed | Allowed | Not allowed |
+| Attribute values | Strings | Strings | JSON, placeholder (`$name`), or group (`(...)`) |
+| Decorations (`.name`) | No equivalent | No equivalent | Built-in |
+| Custom delimiters | Fixed (`<`, `>`) | Fixed (`<`, `>`) | Configurable (e.g., `\|...\|`, `!...?`) |
+| Placeholders (`$name`) | No equivalent | No equivalent | Built-in (parse only, no substitution) |
+| Group values (`(v1, v2)`) | No equivalent | No equivalent | Built-in |
+| Output | DOM tree | DOM tree | Typed AST (`DocumentNode`) |
+| Rendering | Yes | Depends on processor | No — parse only |
+
+onlytag is not a replacement for HTML or XML. It is a structured markup language designed for machine-readable, tag-only documents where every piece of data is expressed as a tag, an attribute value, or a decoration.
+
+## Concepts
+
+### Tag
+
+A tag is the fundamental unit of structure. There are three forms:
+
+| Form | Syntax | Description |
+|---|---|---|
+| Opening | `<TagName>` | Begins an element that contains children |
+| Closing | `</TagName>` | Ends the matching opening tag |
+| Self-closing | `<TagName />` | A complete element with no children |
+
+When parsing markup via `tokenize`/`parse`, tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive. When deserializing a pre-built AST via `load()`, tag name validation is slightly more permissive and accepts names matching `[A-Za-z0-9_-]+`.
+
+A document can have multiple top-level tags:
+
+```
+<A />
+<B />
+<C />
+```
+
+This produces a `DocumentNode` with three children.
+
+### Attribute
+
+Attributes attach data to a tag using `key=value` syntax. The key follows identifier rules (letters, digits, `_`, `-`). The value must be one of the following:
+
+**JSON values** — any valid JSON literal:
+
+| Type | Example |
+|---|---|
+| String | `name="Lumina"` |
+| Number | `level=42` |
+| Boolean | `active=true` |
+| Null | `slot=null` |
+| Object | `config={"key": "value"}` |
+| Array | `items=[1, 2, 3]` |
+
+**Placeholder** — a symbolic reference written as `$name`:
+
+```
+<Button action=$submitHandler />
+```
+
+In the AST, this becomes `{ type: "placeholder", name: "submitHandler" }`. The library parses placeholders but does not perform any substitution or replacement. Consumers are responsible for resolving placeholders in application code.
+
+**Group value** — a parenthesized, comma-separated list of JSON values and/or placeholders:
+
+```
+<Filter eq=($mode, "dark", 1) />
+```
+
+In the AST, this becomes `{ type: "group", values: [{ type: "placeholder", name: "mode" }, "dark", 1] }`.
+
+An empty group is also valid:
+
+```
+<Tag key=() />
+```
+
+### Decoration
+
+Decorations are flag-like annotations written as `.name` inside a tag. They carry no value — their presence is the signal.
+
+```
+<Card .elevated .rounded_lg />
+```
+
+Decoration names may contain letters, digits, `_`, and `-`. Decorations and attributes can be freely interleaved:
+
+```
+<Widget .d1 count=1 .d2 enabled=true />
+```
+
+### Custom Delimiters
+
+By default, tags use `<` and `>` as delimiters. You can configure alternative delimiter pairs through the `tags` option:
 
 ```ts
-import { onlytag } from "onlytag"
-
-const ot = new onlytag()
-
-// AST を JSON 文字列にシリアライズ
-const ast = ot.parse(ot.tokenize(`<Button .primary text="Click me" />`))
-const json = ot.dump(ast)
-
-// JSON 文字列から AST を復元
-const loaded = ot.load(json)
+const ot = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
+const doc = ot.parse(ot.tokenize(`|Button .primary text="Click me" /|`))
 ```
 
-## Examples
+Symmetric pairs (same character for opening and closing) are supported. You can also define multiple delimiter pairs simultaneously:
 
-```txt
-<AppLayout>
-    <Header .fixed .glassmorphism>
-        <NavigationMenu items=[{"label": "Home", "href": "/"}, {"label": "Docs", "href": "/docs"}] />
-    </Header>
-    <MainContent>
-        <Card .elevated .rounded_lg>
-            <Title .primary text="Welcome to onlytag" />
-            <Button .large .success action={"type": "submit", "id": 101} />
-        </Card>
-    </MainContent>
-</AppLayout>
+```ts
+const ot = new onlytag({
+  tags: [
+    { opening: "<", closing: ">" },
+    { opening: "|", closing: "|" },
+  ],
+})
+const doc = ot.parse(ot.tokenize(`<Parent>|Child /|</Parent>`))
 ```
 
-```txt
-<Character .hero .rare_ssr>
-    <Identity name="Lumina" level=42 />
-    <Stats
-        base={"hp": 1500, "mp": 800}
-        modifiers=[1.2, 0.9, 1.05]
-    />
-    <Inventory>
-        <Weapon .enchanted id="w-99" durability=0.85 />
-        <Skills
-            active=[{"name": "Fireball", "damage": 250}, {"name": "Heal", "amount": 100}]
-            passive=null
-        />
-    </Inventory>
+Allowed delimiter characters: `!`, `#`, `%`, `&`, `*`, `+`, `;`, `<`, `>`, `?`, `@`, `^`, `|`, `~`
+
+Each character can only appear in one pair. Within a single pair, the opening and closing characters may be the same.
+
+## Whitespace
+
+All whitespace (spaces, tabs, newlines) is ignored outside of JSON string literals. These two are equivalent:
+
+```
+<A level=1 />
+```
+
+```
+<A
+  level=1
+/>
+```
+
+Whitespace inside JSON string attribute values (e.g., `name="hello world"`) is preserved as part of the JSON literal.
+
+## Options
+
+The `onlytag` constructor accepts an optional `Options` object to control which features are allowed:
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `allowDecorations` | `boolean` | `true` | Allow `.name` decoration syntax |
+| `allowAttributes` | `boolean` | `true` | Allow `key=value` attribute syntax |
+| `allowPlaceholders` | `boolean` | `true` | Allow `$name` placeholder values |
+| `allowMixedDelimiters` | `boolean` | `true` | Allow the same tag name to use different delimiter pairs |
+| `allowInconsistentClosures` | `boolean` | `true` | Allow a tag name to be used as both self-closing and open/close |
+| `tags` | `TagDelimiterPair[]` | `[{ opening: "<", closing: ">" }]` | Active delimiter pairs |
+
+When an option is set to `false`, using the corresponding feature throws an error.
+
+```ts
+// Tags only — no decorations, no attributes, no placeholders
+const strict = new onlytag({
+  allowDecorations: false,
+  allowAttributes: false,
+  allowPlaceholders: false,
+})
+```
+
+## Usage Examples
+
+### Nested Elements with Decorations and Attributes
+
+```
+<Character .hero .rare>
+  <Identity name="Lumina" level=42 />
+  <Stats base={"hp": 1500, "mp": 800} modifiers=[1.2, 0.9] />
+  <Inventory>
+    <Weapon .enchanted id="w-99" durability=0.85 />
+  </Inventory>
 </Character>
 ```
 
-```txt
+### Custom Delimiters with Group Values for Conditional-Like Patterns
+
+By combining custom delimiters, attributes, and group values, you can express conditional-like structures. Note that onlytag only parses — interpretation is up to the consumer.
+
+```ts
+const ot = new onlytag({
+  tags: [
+    { opening: "<", closing: ">" },
+    { opening: "|", closing: "|" },
+  ],
+})
+
+const input = `
+<Layout>
+  <Header title="My App" />
+  | if equal=($theme, "dark") /|
+  <Body>
+    <Content text="Hello" />
+  </Body>
+</Layout>
+`
+
+const doc = ot.parse(ot.tokenize(input))
+```
+
+The `| if equal=($theme, "dark") /|` tag uses pipe delimiters with a group value containing a placeholder and a string. The library parses it into an AST node — it does not evaluate the condition.
+
+### Strict Options for Structured Logging
+
+With restrictive options, onlytag can be used to define structured log entries. Multiple top-level tags are supported:
+
+```ts
+const ot = new onlytag({
+  allowDecorations: true,
+  allowAttributes: true,
+  allowPlaceholders: false,
+  allowInconsistentClosures: false,
+})
+
+const input = `
 <Event .info timestamp=1710000000>
-    <Payload type="login" success=true />
+  <Payload type="login" success=true />
 </Event>
 
-<Event .warn .low_priority timestamp=1710000123>
-    <Payload type="disk_usage" percent=85.5 />
+<Event .warn timestamp=1710000123>
+  <Payload type="disk_usage" percent=85.5 />
 </Event>
 
 <Event .error .critical timestamp=1710000500>
-    <Details code=500 message="Internal Server Error" trace_id="abc-123" />
-    <Stacktrace frames=[{"fn": "main", "line": 42}, {"fn": "init", "line": 10}] />
+  <Details code=500 message="Internal Server Error" />
 </Event>
+`
+
+const doc = ot.parse(ot.tokenize(input))
+// doc.children.length === 3
 ```
+
+By disabling placeholders and inconsistent closures, you ensure a stricter, more predictable document format suitable for structured records.
+
+## Serialization
+
+The `onlytag` class provides `dump` and `load` for JSON serialization of the AST:
+
+```ts
+const ot = new onlytag()
+
+// Parse
+const doc = ot.parse(ot.tokenize(`<Button .primary text="Click me" />`))
+
+// Serialize to JSON string
+const json = ot.dump(doc)
+
+// Deserialize back to DocumentNode (validates against schema)
+const restored = ot.load(json)
+```
+
+`dump` calls `JSON.stringify` on the `DocumentNode`. `load` parses the JSON string and validates it against the `DocumentNode` schema using [zod](https://github.com/colinhacks/zod). If the JSON is malformed or does not match the schema, `load` throws an error.
+
+## Limitations
+
+- [x] No raw text between tags — all content must be expressed as tags, attributes, or decorations
+- [x] No placeholder substitution — `$name` placeholders are parsed into the AST but not replaced or resolved
+- [x] No rendering or execution — onlytag is a parser only; interpretation of the AST is the consumer's responsibility
+- [x] No template engine features — no loops, conditionals, or includes
+
+## License
+
+MIT
