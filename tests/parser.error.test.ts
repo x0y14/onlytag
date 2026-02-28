@@ -591,6 +591,13 @@ test("parser error: invalid json token in group fails", () => {
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
+// --- デコレーション重複 ---
+
+// 同一デコレーション名が重複する場合にparse段で失敗することを確認する
+test("parser error: duplicate decoration fails", () => {
+  expectParserErrorWithPosition("<A .foo .foo />")
+})
+
 // --- 属性キー重複 ---
 
 // JSON値の属性キーが重複する場合にparse段で失敗することを確認する

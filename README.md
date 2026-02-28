@@ -34,7 +34,7 @@ console.log(ot.dump(doc))
 //    {
 //      "type": "element",
 //      "name": "Button",
-//      "decorations": [{ "name": "primary" }],
+//      "decorations": ["primary"],
 //      "attributes": { "text": "Click me" },
 //      "children": [],
 //      "selfClosing": true

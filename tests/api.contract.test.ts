@@ -8,7 +8,6 @@ test("api contract: exports required symbols", () => {
   assert.isDefined(onlytagModule.TokenSchema)
   assert.isDefined(onlytagModule.TokenKind)
   assert.isDefined(onlytagModule.JsonValueSchema)
-  assert.isDefined(onlytagModule.DecorationSchema)
   assert.isDefined(onlytagModule.PlaceholderSchema)
   assert.isDefined(onlytagModule.AttributeValueSchema)
   assert.isDefined(onlytagModule.ElementNodeSchema)
@@ -89,7 +88,7 @@ test("api contract: dump serializes document node to json string", () => {
   assert.equal(parsed.type, "document")
   assert.equal(parsed.children.length, 1)
   assert.equal(parsed.children[0].name, "A")
-  assert.equal(parsed.children[0].decorations[0].name, "bold")
+  assert.equal(parsed.children[0].decorations[0], "bold")
   assert.equal(parsed.children[0].attributes.text, "hello")
 })
 

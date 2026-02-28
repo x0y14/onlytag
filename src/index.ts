@@ -17,14 +17,12 @@ export {
 export { TokenKind, TokenSchema, type Token } from "./token.js"
 export {
   JsonValueSchema,
-  DecorationSchema,
   PlaceholderSchema,
   GroupValueSchema,
   AttributeValueSchema,
   ElementNodeSchema,
   DocumentNodeSchema,
   type JsonValue,
-  type Decoration,
   type Placeholder,
   type GroupValue,
   type AttributeValue,

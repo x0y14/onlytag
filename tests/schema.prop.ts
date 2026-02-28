@@ -2,7 +2,6 @@ import { test, assert } from "vitest"
 import * as fc from "fast-check"
 import {
   JsonValueSchema,
-  DecorationSchema,
   PlaceholderSchema,
   GroupValueSchema,
   AttributeValueSchema,
@@ -59,29 +58,50 @@ test("schema json value: accepts nested arrays and objects", () => {
 
 const validDecorationNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
 
-// 有効な装飾名は常にバリデーション成功することを確認する
+// 有効な装飾名を含む ElementNode がバリデーション成功することを確認する
 test("schema decoration: accepts valid names", () => {
   fc.assert(
     fc.property(validDecorationNameArb, (name) => {
-      const result = DecorationSchema.safeParse({ name })
+      const result = ElementNodeSchema.safeParse({
+        type: "element",
+        name: "A",
+        decorations: [name],
+        attributes: {},
+        children: [],
+        selfClosing: true,
+      })
       assert.isTrue(result.success)
     }),
   )
 })
 
-// 空文字列の装飾名はバリデーション失敗することを確認する
+// 空文字列の装飾名を含む ElementNode はバリデーション失敗することを確認する
 test("schema decoration: rejects empty name", () => {
-  const result = DecorationSchema.safeParse({ name: "" })
+  const result = ElementNodeSchema.safeParse({
+    type: "element",
+    name: "A",
+    decorations: [""],
+    attributes: {},
+    children: [],
+    selfClosing: true,
+  })
   assert.isFalse(result.success)
 })
 
-// 不正文字を含む装飾名はバリデーション失敗することを確認する
+// 不正文字を含む装飾名を持つ ElementNode はバリデーション失敗することを確認する
 test("schema decoration: rejects names with invalid chars", () => {
   const invalidCharArb = fc.stringMatching(/^[A-Za-z0-9_-]*[^A-Za-z0-9_-]+[A-Za-z0-9_-]*$/)
 
   fc.assert(
     fc.property(invalidCharArb, (name) => {
-      const result = DecorationSchema.safeParse({ name })
+      const result = ElementNodeSchema.safeParse({
+        type: "element",
+        name: "A",
+        decorations: [name],
+        attributes: {},
+        children: [],
+        selfClosing: true,
+      })
       assert.isFalse(result.success)
     }),
   )
@@ -316,7 +336,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
   node: fc.record({
     type: fc.constant("element" as const),
     name: tagNameArb,
-    decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
+    decorations: fc.array(validDecorationNameArb, { maxLength: 3 }),
     attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
     selfClosing: fc.constant(false),
@@ -326,7 +346,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
 const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
   name: tagNameArb,
-  decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
+  decorations: fc.array(validDecorationNameArb, { maxLength: 3 }),
   attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),
   selfClosing: fc.constant(true),

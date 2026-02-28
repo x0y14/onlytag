@@ -2,7 +2,6 @@ import type { Token, TokenKind } from "./token.js"
 import type {
   DocumentNode,
   ElementNode,
-  Decoration,
   JsonValue,
   Placeholder,
   GroupValue,
@@ -686,7 +685,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     }
 
     // デコレーションと属性
-    const decorations: Decoration[] = []
+    const decorations: string[] = []
     const attributes: Record<string, AttributeValue> = {}
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
@@ -704,7 +703,13 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
             deco.position,
           )
         }
-        decorations.push({ name: decoName })
+        if (decorations.includes(decoName)) {
+          parseError(
+            `duplicate decoration: name="${decoName}"`,
+            deco.position,
+          )
+        }
+        decorations.push(decoName)
       } else {
         const attrToken = advance()
         const attrName = attrToken.value

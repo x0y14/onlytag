@@ -38,8 +38,8 @@ test("parser: parses decorations", () => {
   const doc = ot.parse(ot.tokenize("<Card .elevated .rounded_lg />"))
   const card = doc.children[0]
   assert.equal(card.decorations.length, 2)
-  assert.equal(card.decorations[0].name, "elevated")
-  assert.equal(card.decorations[1].name, "rounded_lg")
+  assert.equal(card.decorations[0], "elevated")
+  assert.equal(card.decorations[1], "rounded_lg")
 })
 
 // 属性の後ろにデコレーションが続いても解析できることを確認する
@@ -48,7 +48,7 @@ test("parser: parses decoration after attribute", () => {
   const badge = doc.children[0]
   assert.equal(badge.attributes["label"], "new")
   assert.equal(badge.decorations.length, 1)
-  assert.equal(badge.decorations[0].name, "primary")
+  assert.equal(badge.decorations[0], "primary")
 })
 
 // デコレーションと属性が交互に並んでも解析できることを確認する
@@ -56,8 +56,8 @@ test("parser: parses alternating decorations and attributes", () => {
   const doc = ot.parse(ot.tokenize("<Widget .d1 count=1 .d2 enabled=true />"))
   const widget = doc.children[0]
   assert.equal(widget.decorations.length, 2)
-  assert.equal(widget.decorations[0].name, "d1")
-  assert.equal(widget.decorations[1].name, "d2")
+  assert.equal(widget.decorations[0], "d1")
+  assert.equal(widget.decorations[1], "d2")
   assert.equal(widget.attributes["count"], 1)
   assert.equal(widget.attributes["enabled"], true)
 })
@@ -134,8 +134,8 @@ test("parser: parses complete README Character example", () => {
   const character = doc.children[0]
   assert.equal(character.name, "Character")
   assert.equal(character.decorations.length, 2)
-  assert.equal(character.decorations[0].name, "hero")
-  assert.equal(character.decorations[1].name, "rare_ssr")
+  assert.equal(character.decorations[0], "hero")
+  assert.equal(character.decorations[1], "rare_ssr")
   assert.equal(character.children.length, 3)
 
   const identity = character.children[0]
@@ -155,7 +155,7 @@ test("parser: parses complete README Character example", () => {
 
   const weapon = inventory.children[0]
   assert.equal(weapon.name, "Weapon")
-  assert.equal(weapon.decorations[0].name, "enchanted")
+  assert.equal(weapon.decorations[0], "enchanted")
   assert.equal(weapon.attributes["id"], "w-99")
   assert.equal(weapon.attributes["durability"], 0.85)
 
@@ -181,7 +181,7 @@ test("parser: accepts allowed identifier characters", () => {
   assert.equal(doc.children.length, 1)
   const node = doc.children[0]
   assert.equal(node.name, "A1-b")
-  assert.equal(node.decorations[0].name, "d_2-e")
+  assert.equal(node.decorations[0], "d_2-e")
   assert.deepStrictEqual(node.attributes["k_3-f"], { x: 1 })
 })
 
@@ -226,7 +226,7 @@ test("parser: parses README Event example as multiple roots", () => {
   const doc = ot.parse(ot.tokenize(input))
   assert.equal(doc.children.length, 3)
   assert.equal(doc.children[0].name, "Event")
-  assert.equal(doc.children[1].decorations[1].name, "low_priority")
+  assert.equal(doc.children[1].decorations[1], "low_priority")
   assert.equal(doc.children[2].children[1].name, "Stacktrace")
 })
 
@@ -261,7 +261,7 @@ test("parser: parses mixed json and placeholder attributes", () => {
   const node = doc.children[0]
   assert.deepStrictEqual(node.attributes["json"], {})
   assert.deepStrictEqual(node.attributes["ph"], { type: "placeholder", name: "abc" })
-  assert.equal(node.decorations[0].name, "deco")
+  assert.equal(node.decorations[0], "deco")
 })
 
 // --- グループ値 ---
@@ -313,7 +313,7 @@ test("parser: parses decoration and group value attributes together", () => {
   const doc = ot.parse(ot.tokenize('<tag .primary eq=($mode, "dark") />'))
   const node = doc.children[0]
   assert.equal(node.decorations.length, 1)
-  assert.equal(node.decorations[0].name, "primary")
+  assert.equal(node.decorations[0], "primary")
   assert.deepStrictEqual(node.attributes["eq"], {
     type: "group",
     values: [{ type: "placeholder", name: "mode" }, "dark"],
@@ -378,8 +378,8 @@ test("parser: custom delimiter with decorations", () => {
   const doc = otCustom.parse(otCustom.tokenize("!Card .elevated .rounded /?"))
   const card = doc.children[0]
   assert.equal(card.decorations.length, 2)
-  assert.equal(card.decorations[0].name, "elevated")
-  assert.equal(card.decorations[1].name, "rounded")
+  assert.equal(card.decorations[0], "elevated")
+  assert.equal(card.decorations[1], "rounded")
 })
 
 // カスタムデリミタで JSON オブジェクト属性を解析できることを確認する
