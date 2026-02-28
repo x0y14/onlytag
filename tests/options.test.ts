@@ -10,6 +10,7 @@ test("normalizeOptions: undefined はデフォルト値を返す", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -24,6 +25,7 @@ test("normalizeOptions: 空オブジェクトはデフォルト値を返す", ()
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -38,6 +40,7 @@ test("normalizeOptions: allowDecorations のみ指定", () => {
     allowDecorations: false,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -52,6 +55,7 @@ test("normalizeOptions: allowAttributes のみ指定", () => {
     allowDecorations: true,
     allowAttributes: false,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -66,6 +70,7 @@ test("normalizeOptions: allowPlaceholders のみ指定", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: false,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -83,6 +88,7 @@ test("normalizeOptions: 両方 false を指定", () => {
     allowDecorations: false,
     allowAttributes: false,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -101,6 +107,7 @@ test("normalizeOptions: 全て false を指定", () => {
     allowDecorations: false,
     allowAttributes: false,
     allowPlaceholders: false,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -118,6 +125,7 @@ test("normalizeOptions: 両方 true を明示指定", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -285,6 +293,29 @@ test("normalizeOptions: allowlist の全文字がデリミタとして使用で�
   }
 })
 
+// --- allowGroup ---
+
+// allowGroup のデフォルトは true であることを確認する
+test("normalizeOptions: allowGroup デフォルトは true", () => {
+  const result = normalizeOptions({})
+  assert.strictEqual(result.allowGroup, true)
+})
+
+// allowGroup のみ指定した場合の正規化を確認する
+test("normalizeOptions: allowGroup のみ指定", () => {
+  const result = normalizeOptions({ allowGroup: false })
+  assert.deepStrictEqual(result, {
+    allowDecorations: true,
+    allowAttributes: true,
+    allowPlaceholders: true,
+    allowGroup: false,
+    allowMixedDelimiters: true,
+    allowInconsistentClosures: true,
+    tags: defaultTags,
+    maxNestingDepth: 1024,
+  })
+})
+
 // --- allowMixedDelimiters ---
 
 // allowMixedDelimiters のみ指定した場合の正規化を確認する
@@ -294,6 +325,7 @@ test("normalizeOptions: allowMixedDelimiters のみ指定", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: false,
     allowInconsistentClosures: true,
     tags: defaultTags,
@@ -316,6 +348,7 @@ test("normalizeOptions: allowInconsistentClosures のみ指定", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: false,
     tags: defaultTags,

@@ -179,6 +179,7 @@ The `onlytag` constructor accepts an optional `Options` object to control which 
 | `allowDecorations` | `boolean` | `true` | Allow `.name` decoration syntax |
 | `allowAttributes` | `boolean` | `true` | Allow `key=value` attribute syntax |
 | `allowPlaceholders` | `boolean` | `true` | Allow `$name` placeholder values |
+| `allowGroup` | `boolean` | `true` | Allow `(v1, v2, ...)` group values |
 | `allowMixedDelimiters` | `boolean` | `true` | Allow the same tag name to use different delimiter pairs |
 | `allowInconsistentClosures` | `boolean` | `true` | Allow a tag name to be used as both self-closing and open/close |
 | `tags` | `TagDelimiterPair[]` | `[{ opening: "<", closing: ">" }]` | Active delimiter pairs |

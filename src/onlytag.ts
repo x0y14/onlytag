@@ -378,6 +378,9 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         emit("PLACEHOLDER", value, start)
         pos = newPos
       } else if (pos < len && input[pos] === "(") {
+        if (!options.allowGroup) {
+          tokenError(`groups are not allowed: found group at position`, start)
+        }
         emit("LPAREN", "(", start)
         pos++
         insideGroup = true
@@ -722,6 +725,9 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         }
         expect("EQUALS")
         if (peek().kind === "LPAREN") {
+          if (!options.allowGroup) {
+            parseError(`groups are not allowed: found group at position`, peek().position)
+          }
           // グループ値のパース
           advance() // LPAREN を消費
           const groupValues: (JsonValue | Placeholder)[] = []

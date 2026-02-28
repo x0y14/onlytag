@@ -28,6 +28,14 @@ const representatives: Record<InputCategory, { label: string; input: string }[]>
     { label: "placeholder 属性", input: "<A attr=$myValue />" },
     { label: "placeholder + JSON 属性", input: '<A ph=$abc json="x" />' },
   ],
+  F: [
+    { label: "グループ + placeholder", input: "<A eq=($mode, 1) />" },
+    { label: "グループ + 複数 placeholder", input: '<A eq=($a, $b, "c") />' },
+  ],
+  G: [
+    { label: "グループ JSON のみ", input: '<A eq=(1, "dark") />' },
+    { label: "グループ JSON 単一", input: "<A eq=(42) />" },
+  ],
 }
 
 /**
@@ -38,7 +46,7 @@ function modeLabel(options: NormalizedOptions): string {
 }
 
 for (const options of getAllNormalizedOptions()) {
-  for (const category of ["A", "B", "C", "D", "E"] as InputCategory[]) {
+  for (const category of ["A", "B", "C", "D", "E", "F", "G"] as InputCategory[]) {
     for (const { label, input } of representatives[category]) {
       const expectPass = shouldPass(category, options)
       const verb = expectPass ? "成功する" : "拒否する"
@@ -91,6 +99,25 @@ test("options matrix: group with json only succeeds when allowPlaceholders=false
     type: "group",
     values: [1, "dark"],
   })
+})
+
+// allowGroup=false でグループ値がブロックされることを確認する
+test("options matrix: group value is blocked when allowGroup=false", () => {
+  const ot = new onlytag({ allowAttributes: true, allowGroup: false })
+  assert.throws(() => {
+    const tokens = ot.tokenize('<A eq=(1, "dark") />')
+    ot.parse(tokens)
+  }, /groups are not allowed/)
+})
+
+// allowGroup=false + allowAttributes=true で通常属性は成功することを確認する
+test("options matrix: normal attributes succeed when allowGroup=false", () => {
+  const ot = new onlytag({ allowAttributes: true, allowGroup: false })
+  const tokens = ot.tokenize('<A name="Lumina" level=42 />')
+  const doc = ot.parse(tokens)
+  assert.strictEqual(doc.type, "document")
+  assert.strictEqual(doc.children[0].attributes["name"], "Lumina")
+  assert.strictEqual(doc.children[0].attributes["level"], 42)
 })
 
 // --- 境界テスト ---
@@ -158,6 +185,22 @@ test("parse guard: allowAttributes=false で属性トークンを渡すとエラ
     { kind: "EOF", value: "", position: 14 },
   ]
   assert.throws(() => ot.parse(tokens), /attributes are not allowed/)
+})
+
+test("parse guard: allowGroup=false で LPAREN トークンを渡すとエラー", () => {
+  const ot = new onlytag({ allowGroup: false })
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "tag", position: 1 },
+    { kind: "IDENT", value: "attr", position: 5 },
+    { kind: "EQUALS", value: "=", position: 9 },
+    { kind: "LPAREN", value: "(", position: 10 },
+    { kind: "JSON_VALUE", value: "1", position: 11 },
+    { kind: "RPAREN", value: ")", position: 12 },
+    { kind: "SLASH_GT", value: "/>", position: 14 },
+    { kind: "EOF", value: "", position: 16 },
+  ]
+  assert.throws(() => ot.parse(tokens), /groups are not allowed/)
 })
 
 test("parse guard: allowPlaceholders=false で PLACEHOLDER トークンを渡すとエラー", () => {

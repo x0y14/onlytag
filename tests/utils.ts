@@ -5,10 +5,10 @@ const defaultTags = [{ opening: "<", closing: ">" }] as const
 /**
  * 全ての正規化済みオプション組み合わせを返す
  *
- * allowMixedDelimiters と allowInconsistentClosures は常に true で固定している。
+ * allowMixedDelimiters, allowInconsistentClosures, allowGroup は常に true で固定している。
  * マトリックステストの入力はデリミタ 1 種類かつ閉じ方の混在がないため、
  * false にしても通るコードパスが変わらない。
- * false 時のエラー系パスは parser.error.test.ts の専用テストでカバーしている。
+ * false 時のエラー系パスは parser.error.test.ts や options.matrix.test.ts の専用テストでカバーしている。
  */
 export function getAllNormalizedOptions(): NormalizedOptions[] {
   return [
@@ -16,6 +16,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: true,
       allowAttributes: true,
       allowPlaceholders: true,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -25,6 +26,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: true,
       allowAttributes: true,
       allowPlaceholders: false,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -34,6 +36,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: true,
       allowAttributes: false,
       allowPlaceholders: true,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -43,6 +46,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: true,
       allowAttributes: false,
       allowPlaceholders: false,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -52,6 +56,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: false,
       allowAttributes: true,
       allowPlaceholders: true,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -61,6 +66,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: false,
       allowAttributes: true,
       allowPlaceholders: false,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -70,6 +76,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: false,
       allowAttributes: false,
       allowPlaceholders: true,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -79,6 +86,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
       allowDecorations: false,
       allowAttributes: false,
       allowPlaceholders: false,
+      allowGroup: true,
       allowMixedDelimiters: true,
       allowInconsistentClosures: true,
       tags: [...defaultTags],
@@ -88,7 +96,7 @@ export function getAllNormalizedOptions(): NormalizedOptions[] {
 }
 
 /** 入力カテゴリの判定用 */
-export type InputCategory = "A" | "B" | "C" | "D" | "E"
+export type InputCategory = "A" | "B" | "C" | "D" | "E" | "F" | "G"
 
 /**
  * 指定カテゴリの入力が指定モードで成功すべきか判定する
@@ -105,5 +113,9 @@ export function shouldPass(category: InputCategory, options: NormalizedOptions):
       return options.allowDecorations && options.allowAttributes
     case "E":
       return options.allowAttributes && options.allowPlaceholders
+    case "F":
+      return options.allowAttributes && options.allowPlaceholders && options.allowGroup
+    case "G":
+      return options.allowAttributes && options.allowGroup
   }
 }
