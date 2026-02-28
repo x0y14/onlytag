@@ -44,7 +44,7 @@ const doc = ot.parse(tokens)
 | Aspect | HTML | XML | onlytag |
 |---|---|---|---|
 | Raw text between tags | Allowed | Allowed | Not allowed |
-| Attribute values | Strings | Strings | Must be valid JSON |
+| Attribute values | Strings | Strings | JSON, placeholder (`$name`), or group (`(...)`) |
 | Decorations (`.name`) | No equivalent | No equivalent | Built-in |
 | Custom delimiters | Fixed (`<`, `>`) | Fixed (`<`, `>`) | Configurable (e.g., `\|...\|`, `!...?`) |
 | Placeholders (`$name`) | No equivalent | No equivalent | Built-in (parse only, no substitution) |
@@ -66,7 +66,7 @@ A tag is the fundamental unit of structure. There are three forms:
 | Closing | `</TagName>` | Ends the matching opening tag |
 | Self-closing | `<TagName />` | A complete element with no children |
 
-Tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive.
+When parsing markup via `tokenize`/`parse`, tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive. When deserializing a pre-built AST via `load()`, tag name validation is slightly more permissive and accepts names matching `[A-Za-z0-9_-]+`.
 
 A document can have multiple top-level tags:
 
@@ -129,7 +129,7 @@ Decoration names may contain letters, digits, `_`, and `-`. Decorations and attr
 <Widget .d1 count=1 .d2 enabled=true />
 ```
 
-### Custom Delimiter (CustomTag)
+### Custom Delimiters
 
 By default, tags use `<` and `>` as delimiters. You can configure alternative delimiter pairs through the `tags` option:
 
