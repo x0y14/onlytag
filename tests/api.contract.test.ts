@@ -104,3 +104,96 @@ test("api contract: PlaceholderSchema rejects invalid name", () => {
   const result = onlytagModule.PlaceholderSchema.safeParse({ type: "placeholder", name: "1abc" })
   assert.isFalse(result.success)
 })
+
+// --- dump() ラウンドトリップテスト ---
+
+// tokenize → parse → dump → JSON.parse で AST 構造が保持されることを確認する
+test("api contract: round-trip preserves AST structure", () => {
+  const ot = new onlytag()
+  const input = `
+    <Page .main>
+      <Header .bold title="Hello" count=42 active=true empty=null />
+      <List items=[1, "two", 3] config={"key": "value", "nested": [true]} />
+      <Ref action=$handler />
+      <Group filter=($mode, "dark", 1) />
+    </Page>
+  `
+  const tokens = ot.tokenize(input)
+  const doc = ot.parse(tokens)
+  const json = ot.dump(doc)
+  const restored = JSON.parse(json)
+
+  assert.deepStrictEqual(restored, doc)
+})
+
+// dump → JSON.parse → dump を2回適用して同一結果であることを確認する（冪等性）
+test("api contract: dump is idempotent", () => {
+  const ot = new onlytag()
+  const input = '<Container .elevated level=99 label="test" nested={"a": [1, 2]} />'
+  const doc = ot.parse(ot.tokenize(input))
+
+  const firstDump = ot.dump(doc)
+  const secondDump = ot.dump(JSON.parse(firstDump))
+
+  assert.strictEqual(firstDump, secondDump)
+})
+
+// 全属性値型が dump 後も型と値を保持していることを確認する
+test("api contract: dump preserves all attribute value types", () => {
+  const ot = new onlytag()
+  const input = `
+    <Tag
+      str="hello world"
+      num=3.14
+      int=0
+      negative=-42
+      boolTrue=true
+      boolFalse=false
+      nil=null
+      arr=[1, "two", true, null]
+      obj={"key": "value", "num": 1}
+      placeholder=$myVar
+      group=($ref, "literal", 100)
+    />
+  `
+  const doc = ot.parse(ot.tokenize(input))
+  const restored = JSON.parse(ot.dump(doc))
+  const attributes = restored.children[0].attributes
+
+  // 文字列
+  assert.strictEqual(attributes.str, "hello world")
+  assert.strictEqual(typeof attributes.str, "string")
+
+  // 数値
+  assert.strictEqual(attributes.num, 3.14)
+  assert.strictEqual(typeof attributes.num, "number")
+  assert.strictEqual(attributes.int, 0)
+  assert.strictEqual(attributes.negative, -42)
+
+  // 真偽値
+  assert.strictEqual(attributes.boolTrue, true)
+  assert.strictEqual(typeof attributes.boolTrue, "boolean")
+  assert.strictEqual(attributes.boolFalse, false)
+
+  // null
+  assert.isNull(attributes.nil)
+
+  // 配列
+  assert.isArray(attributes.arr)
+  assert.deepStrictEqual(attributes.arr, [1, "two", true, null])
+
+  // オブジェクト
+  assert.isObject(attributes.obj)
+  assert.deepStrictEqual(attributes.obj, { key: "value", num: 1 })
+
+  // placeholder
+  assert.deepStrictEqual(attributes.placeholder, { type: "placeholder", name: "myVar" })
+
+  // グループ値
+  assert.strictEqual(attributes.group.type, "group")
+  assert.deepStrictEqual(attributes.group.values, [
+    { type: "placeholder", name: "ref" },
+    "literal",
+    100,
+  ])
+})
