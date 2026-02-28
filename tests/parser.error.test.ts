@@ -50,19 +50,29 @@ test("parser error: eof before closing tag fails", () => {
   expectParserErrorWithPosition("<A>")
 })
 
-// タグ名にアンダースコアを含む入力は失敗することを確認する
-test("parser error: tag name with underscore fails", () => {
-  expectParserErrorWithPosition("<A_b />")
+// タグ名がアンダースコアで始まる入力は失敗することを確認する
+test("parser error: tag name starting with underscore fails", () => {
+  expectParserErrorWithPosition("<_Tag />")
 })
 
-// 閉じタグ名にアンダースコアを含む入力は失敗することを確認する
-test("parser error: closing tag name with underscore fails", () => {
-  expectParserErrorWithPosition("<A></A_b>")
+// 閉じタグ名がアンダースコアで始まる入力は失敗することを確認する
+test("parser error: closing tag name starting with underscore fails", () => {
+  expectParserErrorWithPosition("<A></_A>")
 })
 
 // タグ名が数字で始まる入力は失敗することを確認する
 test("parser error: tag name starting with digit fails", () => {
   expectParserErrorWithPosition("<1Tag />")
+})
+
+// 属性名が数字で始まる入力は失敗することを確認する
+test("parser error: attribute name starting with digit fails", () => {
+  expectParserErrorWithPosition("<A 1x=1 />")
+})
+
+// デコレーション名が数字で始まる入力は失敗することを確認する
+test("parser error: decoration name starting with digit fails", () => {
+  expectParserErrorWithPosition("<A .1hot />")
 })
 test("parser error: missing equals before decoration fails", () => {
   let error: unknown

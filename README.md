@@ -41,16 +41,16 @@ const doc = ot.parse(tokens)
 
 ## How It Differs from HTML and XML
 
-| Aspect | HTML | XML | onlytag |
-|---|---|---|---|
-| Raw text between tags | Allowed | Allowed | Not allowed |
-| Attribute values | Strings | Strings | JSON, placeholder (`$name`), or group (`(...)`) |
-| Decorations (`.name`) | No equivalent | No equivalent | Built-in |
-| Custom delimiters | Fixed (`<`, `>`) | Fixed (`<`, `>`) | Configurable (e.g., `\|...\|`, `!...?`) |
-| Placeholders (`$name`) | No equivalent | No equivalent | Built-in (parse only, no substitution) |
-| Group values (`(v1, v2)`) | No equivalent | No equivalent | Built-in |
-| Output | DOM tree | DOM tree | Typed AST (`DocumentNode`) |
-| Rendering | Yes | Depends on processor | No — parse only |
+| Aspect                    | HTML             | XML                  | onlytag                                         |
+| ------------------------- | ---------------- | -------------------- | ----------------------------------------------- |
+| Raw text between tags     | Allowed          | Allowed              | Not allowed                                     |
+| Attribute values          | Strings          | Strings              | JSON, placeholder (`$name`), or group (`(...)`) |
+| Decorations (`.name`)     | No equivalent    | No equivalent        | Built-in                                        |
+| Custom delimiters         | Fixed (`<`, `>`) | Fixed (`<`, `>`)     | Configurable (e.g., `\|...\|`, `!...?`)         |
+| Placeholders (`$name`)    | No equivalent    | No equivalent        | Built-in (parse only, no substitution)          |
+| Group values (`(v1, v2)`) | No equivalent    | No equivalent        | Built-in                                        |
+| Output                    | DOM tree         | DOM tree             | Typed AST (`DocumentNode`)                      |
+| Rendering                 | Yes              | Depends on processor | No — parse only                                 |
 
 onlytag is not a replacement for HTML or XML. It is a structured markup language designed for machine-readable, tag-only documents where every piece of data is expressed as a tag, an attribute value, or a decoration.
 
@@ -60,13 +60,13 @@ onlytag is not a replacement for HTML or XML. It is a structured markup language
 
 A tag is the fundamental unit of structure. There are three forms:
 
-| Form | Syntax | Description |
-|---|---|---|
-| Opening | `<TagName>` | Begins an element that contains children |
-| Closing | `</TagName>` | Ends the matching opening tag |
-| Self-closing | `<TagName />` | A complete element with no children |
+| Form         | Syntax        | Description                              |
+| ------------ | ------------- | ---------------------------------------- |
+| Opening      | `<TagName>`   | Begins an element that contains children |
+| Closing      | `</TagName>`  | Ends the matching opening tag            |
+| Self-closing | `<TagName />` | A complete element with no children      |
 
-When parsing markup via `tokenize`/`parse`, tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive. When deserializing a pre-built AST via `load()`, tag name validation is slightly more permissive and accepts names matching `[A-Za-z0-9_-]+`.
+When parsing markup via `tokenize`/`parse`, all names (tag names, decoration names, attribute keys, and placeholder names) must match `[a-zA-Z][a-zA-Z0-9_-]*`. Names are case-sensitive. When deserializing a pre-built AST via `load()`, the same validation rules apply.
 
 A document can have multiple top-level tags:
 
@@ -80,20 +80,20 @@ This produces a `DocumentNode` with three children.
 
 ### Attribute
 
-Attributes attach data to a tag using `key=value` syntax. The key follows identifier rules (letters, digits, `_`, `-`). The value must be one of the following:
+Attributes attach data to a tag using `key=value` syntax. The key must match `[a-zA-Z][a-zA-Z0-9_-]*`. The value must be one of the following:
 
 **JSON values** — any valid JSON literal:
 
-| Type | Example |
-|---|---|
-| String | `name="Lumina"` |
-| Number | `level=42` |
-| Boolean | `active=true` |
-| Null | `slot=null` |
-| Object | `config={"key": "value"}` |
-| Array | `items=[1, 2, 3]` |
+| Type    | Example                   |
+| ------- | ------------------------- |
+| String  | `name="Lumina"`           |
+| Number  | `level=42`                |
+| Boolean | `active=true`             |
+| Null    | `slot=null`               |
+| Object  | `config={"key": "value"}` |
+| Array   | `items=[1, 2, 3]`         |
 
-**Placeholder** — a symbolic reference written as `$name`:
+**Placeholder** — a symbolic reference written as `$name` (where `name` matches `[a-zA-Z][a-zA-Z0-9_-]*`):
 
 ```
 <Button action=$submitHandler />
@@ -123,7 +123,7 @@ Decorations are flag-like annotations written as `.name` inside a tag. They carr
 <Card .elevated .rounded_lg />
 ```
 
-Decoration names may contain letters, digits, `_`, and `-`. Decorations and attributes can be freely interleaved:
+Decoration names must match `[a-zA-Z][a-zA-Z0-9_-]*`. Decorations and attributes can be freely interleaved:
 
 ```
 <Widget .d1 count=1 .d2 enabled=true />
@@ -174,14 +174,14 @@ Whitespace inside JSON string attribute values (e.g., `name="hello world"`) is p
 
 The `onlytag` constructor accepts an optional `Options` object to control which features are allowed:
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `allowDecorations` | `boolean` | `true` | Allow `.name` decoration syntax |
-| `allowAttributes` | `boolean` | `true` | Allow `key=value` attribute syntax |
-| `allowPlaceholders` | `boolean` | `true` | Allow `$name` placeholder values |
-| `allowMixedDelimiters` | `boolean` | `true` | Allow the same tag name to use different delimiter pairs |
-| `allowInconsistentClosures` | `boolean` | `true` | Allow a tag name to be used as both self-closing and open/close |
-| `tags` | `TagDelimiterPair[]` | `[{ opening: "<", closing: ">" }]` | Active delimiter pairs |
+| Option                      | Type                 | Default                            | Description                                                     |
+| --------------------------- | -------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| `allowDecorations`          | `boolean`            | `true`                             | Allow `.name` decoration syntax                                 |
+| `allowAttributes`           | `boolean`            | `true`                             | Allow `key=value` attribute syntax                              |
+| `allowPlaceholders`         | `boolean`            | `true`                             | Allow `$name` placeholder values                                |
+| `allowMixedDelimiters`      | `boolean`            | `true`                             | Allow the same tag name to use different delimiter pairs        |
+| `allowInconsistentClosures` | `boolean`            | `true`                             | Allow a tag name to be used as both self-closing and open/close |
+| `tags`                      | `TagDelimiterPair[]` | `[{ opening: "<", closing: ">" }]` | Active delimiter pairs                                          |
 
 When an option is set to `false`, using the corresponding feature throws an error.
 

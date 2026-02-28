@@ -8,11 +8,11 @@ function hasPositionHint(message: string): boolean {
   return /position|pos|index|offset/i.test(message)
 }
 
-const identArb = fc.stringMatching(/^[A-Za-z0-9_-]{1,10}$/)
-const tagNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
-const safeIdentArb = identArb.filter((value) => value !== "__proto__")
+const nameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]{0,9}$/)
+const tagNameArb = nameArb
+const safeNameArb = nameArb.filter((value) => value !== "__proto__")
 const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
-const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+const placeholderNameArb = nameArb
 function hasProtoKey(value: unknown): boolean {
   if (Array.isArray(value)) return value.some((item) => hasProtoKey(item))
   if (value !== null && typeof value === "object") {
@@ -33,10 +33,10 @@ const groupValueLiteralArb = fc
   .map((items) => `(${items.join(", ")})`)
 
 const headerPartArb = fc.oneof(
-  identArb.map((deco) => ({ text: `.${deco}` })),
-  fc.tuple(identArb, jsonLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
-  fc.tuple(identArb, placeholderNameArb).map(([name, phName]) => ({ text: `${name}=$${phName}` })),
-  fc.tuple(identArb, groupValueLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
+  nameArb.map((deco) => ({ text: `.${deco}` })),
+  fc.tuple(nameArb, jsonLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
+  fc.tuple(nameArb, placeholderNameArb).map(([name, phName]) => ({ text: `${name}=$${phName}` })),
+  fc.tuple(nameArb, groupValueLiteralArb).map(([name, value]) => ({ text: `${name}=${value}` })),
 )
 /** グループ値の要素で使用禁止な type プロパティを持つかどうかを判定する */
 function hasReservedType(value: unknown): boolean {
@@ -53,19 +53,19 @@ const groupValueElementArb = fc.oneof(
 )
 
 const mixedHeaderPartArb = fc.oneof(
-  safeIdentArb.map((name) => ({ kind: "deco" as const, name })),
-  fc.tuple(safeIdentArb, safeJsonValueArb).map(([name, value]) => ({
+  safeNameArb.map((name) => ({ kind: "deco" as const, name })),
+  fc.tuple(safeNameArb, safeJsonValueArb).map(([name, value]) => ({
     kind: "attr" as const,
     name,
     value,
   })),
-  fc.tuple(safeIdentArb, placeholderNameArb).map(([name, phName]) => ({
+  fc.tuple(safeNameArb, placeholderNameArb).map(([name, phName]) => ({
     kind: "placeholder" as const,
     name,
     phName,
   })),
   fc
-    .tuple(safeIdentArb, fc.array(groupValueElementArb, { minLength: 0, maxLength: 3 }))
+    .tuple(safeNameArb, fc.array(groupValueElementArb, { minLength: 0, maxLength: 3 }))
     .map(([name, values]) => ({
       kind: "group" as const,
       name,

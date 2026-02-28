@@ -185,6 +185,13 @@ test("parser: accepts allowed identifier characters", () => {
   assert.deepStrictEqual(node.attributes["k_3-f"], { x: 1 })
 })
 
+// タグ名にアンダースコアを含む場合も解析できることを確認する
+test("parser: parses tag name with underscore", () => {
+  const doc = ot.parse(ot.tokenize("<A_b />"))
+  assert.equal(doc.children.length, 1)
+  assert.equal(doc.children[0].tagName, "A_b")
+})
+
 // 指数表記の数値を解析できることを確認する
 test("parser: parses scientific notation number", () => {
   const doc = ot.parse(ot.tokenize("<Metric value=1e3 />"))
@@ -252,6 +259,15 @@ test("parser: parses placeholder with hyphen in name", () => {
   assert.deepStrictEqual(doc.children[0].attributes["x"], {
     type: "placeholder",
     name: "my-value-123",
+  })
+})
+
+// placeholder 名にアンダースコアを含む場合も解析できることを確認する
+test("parser: parses placeholder with underscore in name", () => {
+  const doc = ot.parse(ot.tokenize("<A x=$my_value_123 />"))
+  assert.deepStrictEqual(doc.children[0].attributes["x"], {
+    type: "placeholder",
+    name: "my_value_123",
   })
 })
 
