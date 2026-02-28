@@ -688,6 +688,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     const decorations: string[] = []
     const decorationSet = new Set<string>()
     const attributes: Record<string, AttributeValue> = {}
+    const attributeSet = new Set<string>()
     while (peek().kind === "DOT_IDENT" || peek().kind === "IDENT") {
       if (peek().kind === "DOT_IDENT") {
         if (!options.allowDecorations) {
@@ -724,12 +725,13 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
         if (!options.allowAttributes) {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
-        if (attrName in attributes) {
+        if (attributeSet.has(attrName)) {
           parseError(
             `duplicate attribute: name="${attrName}"`,
             attrToken.position,
           )
         }
+        attributeSet.add(attrName)
         expect("EQUALS")
         if (peek().kind === "LPAREN") {
           if (!options.allowGroup) {
