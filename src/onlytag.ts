@@ -14,13 +14,15 @@ import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 
 /** タグ名のバリデーションパターン */
-const TAG_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+const TAG_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
+/** decoration・attribute などの名前のバリデーションパターン */
+const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 /** プレースホルダー先頭文字のバリデーションパターン */
 const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
 /** プレースホルダー後続文字のバリデーションパターン */
-const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9-]/
+const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9_-]/
 /** プレースホルダー名のバリデーションパターン */
-const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 
 // --- tokenize 内部ヘルパー ---
 
@@ -50,12 +52,31 @@ function isIdentChar(ch: string): boolean {
 }
 
 /**
- * 文字列がタグ名として有効かどうかを判定する（[a-zA-Z][a-zA-Z0-9-]*）
+ * 文字が識別子の先頭に使用可能な文字（英字）かどうかを判定する
+ * @param ch - 判定対象の1文字
+ * @returns 識別子先頭文字であればtrue
+ */
+function isIdentStartChar(ch: string): boolean {
+  const c = ch.charCodeAt(0)
+  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122)
+}
+
+/**
+ * 文字列がタグ名として有効かどうかを判定する（[a-zA-Z][a-zA-Z0-9_-]*）
  * @param name - 判定対象の文字列
  * @returns 有効なタグ名であればtrue
  */
 function isValidTagName(name: string): boolean {
   return TAG_NAME_PATTERN.test(name)
+}
+
+/**
+ * 文字列が名前（tagname / decoration / attribute）の形式として有効かどうかを判定する
+ * @param name - 判定対象の文字列
+ * @returns 有効であればtrue
+ */
+function isValidName(name: string): boolean {
+  return NAME_PATTERN.test(name)
 }
 
 /**
@@ -183,7 +204,7 @@ function readJsonValue(
 }
 
 /**
- * 入力文字列から placeholder を読み取る。$[a-zA-Z][a-zA-Z0-9-]* の形式
+ * 入力文字列から placeholder を読み取る。$[a-zA-Z][a-zA-Z0-9_-]* の形式
  * @param input - 入力文字列全体
  * @param pos - 読み取り開始位置（$ の位置）
  * @returns ドル記号を含む placeholder 文字列と読み取り後の位置のタプル
@@ -197,7 +218,10 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
 
   if (pos >= len || !PLACEHOLDER_FIRST_CHAR_PATTERN.test(input[pos])) {
     const actual = pos < len ? input[pos] : "<eof>"
-    tokenError(`invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9-]*>, actual=<$${actual}>`, start)
+    tokenError(
+      `invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9_-]*>, actual=<$${actual}>`,
+      start,
+    )
   }
 
   while (pos < len && PLACEHOLDER_CHAR_PATTERN.test(input[pos])) pos++
@@ -400,7 +424,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
 
       if (ch === ".") {
         pos += 1
-        if (pos < len && isIdentChar(input[pos])) {
+        if (pos < len && isIdentStartChar(input[pos])) {
           if (!options.allowDecorations) {
             tokenError(`decorations are not allowed: found decoration at position`, start)
           }
@@ -410,7 +434,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         } else {
           const actual = pos < len ? `.${input[pos]}` : ".<eof>"
           tokenError(
-            `invalid decoration token: expected=<.[A-Za-z0-9_-]+>, actual=<${actual}>`,
+            `invalid decoration token: expected=<.[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${actual}>`,
             start,
           )
         }
@@ -424,6 +448,12 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
       }
 
       if (isIdentChar(ch)) {
+        if (!isIdentStartChar(ch)) {
+          tokenError(
+            `invalid identifier token: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${ch}>`,
+            pos,
+          )
+        }
         while (pos < len && isIdentChar(input[pos])) pos++
         emit("IDENT", input.slice(start, pos), start)
         continue
@@ -563,7 +593,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     const tagName = tagToken.value
     if (!isValidTagName(tagName)) {
       parseError(
-        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${tagName}>`,
+        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${tagName}>`,
         tagToken.position,
       )
     }
@@ -593,9 +623,23 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           )
         }
         const deco = advance()
-        decorations.push({ name: deco.value.slice(1) })
+        const decoName = deco.value.startsWith(".") ? deco.value.slice(1) : deco.value
+        if (!isValidName(decoName)) {
+          parseError(
+            `invalid decoration name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${decoName}>`,
+            deco.position,
+          )
+        }
+        decorations.push({ name: decoName })
       } else {
-        const attrName = advance().value
+        const attrToken = advance()
+        const attrName = attrToken.value
+        if (!isValidName(attrName)) {
+          parseError(
+            `invalid attribute name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${attrName}>`,
+            attrToken.position,
+          )
+        }
         if (!options.allowAttributes) {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
@@ -700,7 +744,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     const closeTag = expect("IDENT")
     if (!isValidTagName(closeTag.value)) {
       parseError(
-        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9-]*>, actual=<${closeTag.value}>`,
+        `invalid tag name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${closeTag.value}>`,
         closeTag.position,
       )
     }

@@ -66,7 +66,7 @@ A tag is the fundamental unit of structure. There are three forms:
 | Closing | `</TagName>` | Ends the matching opening tag |
 | Self-closing | `<TagName />` | A complete element with no children |
 
-When parsing markup via `tokenize`/`parse`, tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive. When deserializing a pre-built AST via `load()`, tag name validation is slightly more permissive and accepts names matching `[A-Za-z0-9_-]+`.
+Tag names must match `[a-zA-Z][a-zA-Z0-9_-]*` (start with a letter; then letters, digits, `_`, `-`). Tag names are case-sensitive.
 
 A document can have multiple top-level tags:
 
@@ -80,7 +80,7 @@ This produces a `DocumentNode` with three children.
 
 ### Attribute
 
-Attributes attach data to a tag using `key=value` syntax. The key follows identifier rules (letters, digits, `_`, `-`). The value must be one of the following:
+Attributes attach data to a tag using `key=value` syntax. The key must match `[a-zA-Z][a-zA-Z0-9_-]*`. The value must be one of the following:
 
 **JSON values** — any valid JSON literal:
 
@@ -93,7 +93,7 @@ Attributes attach data to a tag using `key=value` syntax. The key follows identi
 | Object | `config={"key": "value"}` |
 | Array | `items=[1, 2, 3]` |
 
-**Placeholder** — a symbolic reference written as `$name`:
+**Placeholder** — a symbolic reference written as `$name`. The name must match `[a-zA-Z][a-zA-Z0-9_-]*`:
 
 ```
 <Button action=$submitHandler />
@@ -117,7 +117,7 @@ An empty group is also valid:
 
 ### Decoration
 
-Decorations are flag-like annotations written as `.name` inside a tag. They carry no value — their presence is the signal.
+Decorations are flag-like annotations written as `.name` inside a tag. The name must match `[a-zA-Z][a-zA-Z0-9_-]*`. They carry no value — their presence is the signal.
 
 ```
 <Card .elevated .rounded_lg />

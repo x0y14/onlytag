@@ -33,6 +33,14 @@ test("parser: parses nested elements", () => {
   assert.equal(parent.children[0].selfClosing, true)
 })
 
+// タグ名・属性名・placeholder名でアンダースコア/ハイフンが使用できることを確認する
+test("parser: accepts unified name spec for tag/attr/placeholder", () => {
+  const doc = ot.parse(ot.tokenize("<A_b c_2-d=$my_value />"))
+  assert.equal(doc.children[0].tagName, "A_b")
+  const value = doc.children[0].attributes["c_2-d"]
+  assert.deepStrictEqual(value, { type: "placeholder", name: "my_value" })
+})
+
 // デコレーションを複数解析できることを確認する
 test("parser: parses decorations", () => {
   const doc = ot.parse(ot.tokenize("<Card .elevated .rounded_lg />"))

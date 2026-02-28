@@ -12,8 +12,8 @@ const optionsArb = fc.record({
 /** 有効な識別子 */
 const identArb = fc.stringMatching(/^[A-Za-z][A-Za-z0-9_-]{0,9}$/)
 
-/** 有効なタグ名（[a-zA-Z][a-zA-Z0-9-]*） */
-const tagNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+/** 有効なタグ名（[a-zA-Z][a-zA-Z0-9_-]*） */
+const tagNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]{0,9}$/)
 
 /** decoration 文字列 */
 const decorationArb = identArb.map((name) => `.${name}`)
@@ -25,7 +25,7 @@ const jsonLiteralArb = fc.jsonValue().map((value) => JSON.stringify(value))
 const attributeArb = fc.tuple(identArb, jsonLiteralArb).map(([key, value]) => `${key}=${value}`)
 
 /** placeholder 名 */
-const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]{0,9}$/)
+const placeholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]{0,9}$/)
 
 /** placeholder 属性文字列 */
 const placeholderAttributeArb = fc

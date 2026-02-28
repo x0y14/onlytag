@@ -1,11 +1,15 @@
 import { z } from "zod"
 
+/** tagname / decoration / attribute / placeholder で使用できる名前のバリデーションパターン */
+const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 /** デコレーション名のバリデーションパターン */
-const DECORATION_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
+const DECORATION_NAME_PATTERN = NAME_PATTERN
 /** プレースホルダー名のバリデーションパターン */
-const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
+const PLACEHOLDER_NAME_PATTERN = NAME_PATTERN
 /** タグ名のスキーマバリデーションパターン */
-const TAG_NAME_SCHEMA_PATTERN = /^[A-Za-z0-9_-]+$/
+const TAG_NAME_SCHEMA_PATTERN = NAME_PATTERN
+/** 属性名のスキーマバリデーションパターン */
+const ATTRIBUTE_NAME_SCHEMA_PATTERN = NAME_PATTERN
 
 /** 任意のJSON値を受け付けるZodスキーマ */
 export const JsonValueSchema = z.json()
@@ -75,7 +79,7 @@ export const ElementNodeSchema: z.ZodType<ElementNode> = z.lazy(() =>
     type: z.literal("element"),
     tagName: z.string().regex(TAG_NAME_SCHEMA_PATTERN),
     decorations: z.array(DecorationSchema),
-    attributes: z.record(z.string(), AttributeValueSchema),
+    attributes: z.record(z.string().regex(ATTRIBUTE_NAME_SCHEMA_PATTERN), AttributeValueSchema),
     children: z.array(ElementNodeSchema),
     selfClosing: z.boolean(),
   }),

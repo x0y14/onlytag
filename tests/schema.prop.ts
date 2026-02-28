@@ -57,7 +57,13 @@ test("schema json value: accepts nested arrays and objects", () => {
 
 // --- Decoration関連 ---
 
-const validDecorationNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/)
+const validDecorationNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
+const invalidDecorationNameArb = fc.oneof(
+  fc.constant(""),
+  fc.stringMatching(/^[0-9][a-zA-Z0-9_-]*$/),
+  fc.stringMatching(/^[_-][a-zA-Z0-9_-]*$/),
+  fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*[^a-zA-Z0-9_-]+[a-zA-Z0-9_-]*$/),
+)
 
 // 有効な装飾名は常にバリデーション成功することを確認する
 test("schema decoration: accepts valid names", () => {
@@ -75,12 +81,10 @@ test("schema decoration: rejects empty name", () => {
   assert.isFalse(result.success)
 })
 
-// 不正文字を含む装飾名はバリデーション失敗することを確認する
-test("schema decoration: rejects names with invalid chars", () => {
-  const invalidCharArb = fc.stringMatching(/^[A-Za-z0-9_-]*[^A-Za-z0-9_-]+[A-Za-z0-9_-]*$/)
-
+// 不正な装飾名はバリデーション失敗することを確認する
+test("schema decoration: rejects invalid names", () => {
   fc.assert(
-    fc.property(invalidCharArb, (name) => {
+    fc.property(invalidDecorationNameArb, (name) => {
       const result = DecorationSchema.safeParse({ name })
       assert.isFalse(result.success)
     }),
@@ -89,11 +93,12 @@ test("schema decoration: rejects names with invalid chars", () => {
 
 // --- Placeholder関連 ---
 
-const validPlaceholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]*$/)
+const validPlaceholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
 const invalidPlaceholderNameArb = fc.oneof(
   fc.constant(""),
-  fc.stringMatching(/^[0-9][a-zA-Z0-9-]*$/),
-  fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9-]*[^a-zA-Z0-9-]+[a-zA-Z0-9-]*$/),
+  fc.stringMatching(/^[0-9][a-zA-Z0-9_-]*$/),
+  fc.stringMatching(/^[_-][a-zA-Z0-9_-]*$/),
+  fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*[^a-zA-Z0-9_-]+[a-zA-Z0-9_-]*$/),
 )
 
 // 有効な placeholder 名は常にバリデーション成功することを確認する
@@ -283,7 +288,8 @@ test("schema token: rejects invalid kind", () => {
 
 // --- ElementNode関連 ---
 
-const tagNameArb = fc.stringMatching(/^[A-Za-z0-9_-]+$/)
+const tagNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
+const attributeNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
 
 // letrec 内の再帰と組み合わせてもスタックオーバーフローしないよう、
 // 属性値はフラットなプリミティブ、placeholder、またはグループ値にする
@@ -312,7 +318,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
     type: fc.constant("element" as const),
     tagName: tagNameArb,
     decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
-    attributes: fc.dictionary(fc.string(), flatAttributeValueArb, { maxKeys: 3 }),
+    attributes: fc.dictionary(attributeNameArb, flatAttributeValueArb, { maxKeys: 3 }),
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
     selfClosing: fc.constant(false),
   }),
@@ -322,7 +328,7 @@ const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
   tagName: tagNameArb,
   decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
-  attributes: fc.dictionary(fc.string(), flatAttributeValueArb, { maxKeys: 3 }),
+  attributes: fc.dictionary(attributeNameArb, flatAttributeValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),
   selfClosing: fc.constant(true),
 })
