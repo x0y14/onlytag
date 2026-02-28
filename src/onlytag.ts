@@ -15,6 +15,7 @@ import { decodeJsonString, encodeJsonValue } from "./utils.js"
 import {
   NAME_FIRST_CHAR_PATTERN,
   NAME_REST_CHAR_PATTERN,
+  NAME_FORMAT,
   isValidName,
 } from "./naming.js"
 
@@ -38,9 +39,8 @@ function isIdentChar(ch: string): boolean {
   return NAME_REST_CHAR_PATTERN.test(ch)
 }
 
-// Note: use isIdentStartChar for the first character and isIdentChar for subsequent ones to enforce NAME_PATTERN.
-// isIdentChar intentionally allows a superset for non-leading positions; NAME_PATTERN (see naming.ts) is the
-// canonical rule for tag/deco/attr/ph names.
+// Note: use isIdentStartChar for the first character and isIdentChar for subsequent ones.
+// These helpers rely on NAME_*_CHAR_PATTERN so the tokenizer stays consistent with NAME_PATTERN.
 
 /**
  * 文字が識別子の先頭に使用可能な文字（英字）かどうかを判定する
@@ -204,7 +204,7 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
   if (!isValidName(name)) {
     const actual = name.length > 0 ? name : nameStart < len ? input[nameStart] : "<eof>"
     tokenError(
-      `invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9_-]*>, actual=<$${actual}>`,
+      `invalid placeholder: expected=<$${NAME_FORMAT}>, actual=<$${actual}>`,
       start,
     )
   }

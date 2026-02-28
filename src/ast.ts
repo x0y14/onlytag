@@ -1,11 +1,17 @@
 import { z } from "zod"
 import { NAME_PATTERN } from "./naming.js"
 
+/**
+* オブジェクトの own `type` を型ディスクリミネータとして取得する。
+*
+* inherited な `type` や string 以外の値は無視し、明示的で安全な判定のみに限定する。
+*/
 function getOwnTypeDiscriminator(value: unknown): string | undefined {
+  // Only consider own properties (not inherited) to avoid surprising behavior with prototypes.
   if (!value || typeof value !== "object") return undefined
   if (!Object.prototype.hasOwnProperty.call(value, "type")) return undefined
 
-  const { type } = value as { type?: unknown }
+  const type = (value as Record<string, unknown>).type
   return typeof type === "string" ? type : undefined
 }
 
