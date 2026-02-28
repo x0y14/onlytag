@@ -123,7 +123,7 @@ Decorations are flag-like annotations written as `.name` inside a tag. The name 
 <Card .elevated .rounded_lg />
 ```
 
-Decoration names may contain letters, digits, `_`, and `-`. Decorations and attributes can be freely interleaved:
+Decoration names must match `[a-zA-Z][a-zA-Z0-9_-]*`. Decorations and attributes can be freely interleaved:
 
 ```
 <Widget .d1 count=1 .d2 enabled=true />

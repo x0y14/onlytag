@@ -64,6 +64,61 @@ test("parser error: closing tag name starting with underscore fails", () => {
 test("parser error: tag name starting with digit fails", () => {
   expectParserErrorWithPosition("<1Tag />")
 })
+
+// DOT_IDENT トークンのデコレーション名が不正な場合にparse段で失敗することを確認する
+test("parser error: invalid decoration name fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "DOT_IDENT", value: ".1bad", position: 3 },
+    { kind: "SLASH_GT", value: "/>", position: 8 },
+    { kind: "EOF", value: "", position: 10 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /invalid decoration name/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
+// IDENT トークンの属性名が不正な場合にparse段で失敗することを確認する
+test("parser error: invalid attribute name fails", () => {
+  const tokens: Token[] = [
+    { kind: "LT", value: "<", position: 0 },
+    { kind: "IDENT", value: "A", position: 1 },
+    { kind: "IDENT", value: "_bad", position: 3 },
+    { kind: "EQUALS", value: "=", position: 7 },
+    { kind: "JSON_VALUE", value: "1", position: 8 },
+    { kind: "SLASH_GT", value: "/>", position: 10 },
+    { kind: "EOF", value: "", position: 12 },
+  ]
+
+  let error: unknown
+  try {
+    ot.parse(tokens)
+  } catch (caught) {
+    error = caught
+  }
+
+  if (error === undefined) {
+    assert.fail("missing parser error: expected=<Error>, actual=<no-throw>")
+  }
+
+  assert.instanceOf(error, Error)
+  assert.match((error as Error).message, /invalid attribute name/)
+  assert.match((error as Error).message, /position|pos|index|offset/i)
+})
+
 test("parser error: missing equals before decoration fails", () => {
   let error: unknown
   try {

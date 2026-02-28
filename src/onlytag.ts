@@ -13,16 +13,16 @@ import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 
-/** タグ名のバリデーションパターン */
-const TAG_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 /** decoration・attribute などの名前のバリデーションパターン */
 const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
+/** タグ名のバリデーションパターン */
+const TAG_NAME_PATTERN = NAME_PATTERN
 /** プレースホルダー先頭文字のバリデーションパターン */
 const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
 /** プレースホルダー後続文字のバリデーションパターン */
 const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9_-]/
 /** プレースホルダー名のバリデーションパターン */
-const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
+const PLACEHOLDER_NAME_PATTERN = NAME_PATTERN
 
 // --- tokenize 内部ヘルパー ---
 
