@@ -68,10 +68,10 @@ test("parser error: tag name starting with digit fails", () => {
 // DOT_IDENT トークンのデコレーション名が不正な場合にparse段で失敗することを確認する
 test("parser error: invalid decoration name fails", () => {
   const tokens: Token[] = [
-    { kind: "LT", value: "<", position: 0 },
+    { kind: "LT", value: "<", position: 0, pairIndex: 0 },
     { kind: "IDENT", value: "A", position: 1 },
     { kind: "DOT_IDENT", value: ".1bad", position: 3 },
-    { kind: "SLASH_GT", value: "/>", position: 8 },
+    { kind: "SLASH_GT", value: "/>", position: 8, pairIndex: 0 },
     { kind: "EOF", value: "", position: 10 },
   ]
 
@@ -94,12 +94,12 @@ test("parser error: invalid decoration name fails", () => {
 // IDENT トークンの属性名が不正な場合にparse段で失敗することを確認する
 test("parser error: invalid attribute name fails", () => {
   const tokens: Token[] = [
-    { kind: "LT", value: "<", position: 0 },
+    { kind: "LT", value: "<", position: 0, pairIndex: 0 },
     { kind: "IDENT", value: "A", position: 1 },
     { kind: "IDENT", value: "_bad", position: 3 },
     { kind: "EQUALS", value: "=", position: 7 },
     { kind: "JSON_VALUE", value: "1", position: 8 },
-    { kind: "SLASH_GT", value: "/>", position: 10 },
+    { kind: "SLASH_GT", value: "/>", position: 10, pairIndex: 0 },
     { kind: "EOF", value: "", position: 12 },
   ]
 
