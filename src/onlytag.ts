@@ -51,6 +51,8 @@ function isIdentChar(ch: string): boolean {
   )
 }
 
+// Note: use isIdentStartChar for the first character and isIdentChar for subsequent ones to enforce NAME_PATTERN.
+
 /**
  * 文字が識別子の先頭に使用可能な文字（英字）かどうかを判定する
  * @param ch - 判定対象の1文字
@@ -76,6 +78,8 @@ function isValidTagName(name: string): boolean {
  * @returns 有効であればtrue
  */
 function isValidName(name: string): boolean {
+  // tokenize() already enforces this for normal markup input, but parse() also validates names so that it
+  // remains safe when called with externally constructed Token[].
   return NAME_PATTERN.test(name)
 }
 

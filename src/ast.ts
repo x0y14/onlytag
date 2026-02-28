@@ -6,8 +6,10 @@ const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 const DECORATION_NAME_PATTERN = NAME_PATTERN
 /** プレースホルダー名のバリデーションパターン */
 const PLACEHOLDER_NAME_PATTERN = NAME_PATTERN
+/** タグ名のバリデーションパターン */
+const TAG_NAME_PATTERN = NAME_PATTERN
 /** タグ名のスキーマバリデーションパターン */
-const TAG_NAME_SCHEMA_PATTERN = NAME_PATTERN
+const TAG_NAME_SCHEMA_PATTERN = TAG_NAME_PATTERN
 /** 属性名のスキーマバリデーションパターン */
 const ATTRIBUTE_NAME_SCHEMA_PATTERN = NAME_PATTERN
 
