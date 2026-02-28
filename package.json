@@ -12,6 +12,14 @@
   ],
   "license": "MIT",
   "author": "Yuhei Yamauchi",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/x0y14/onlytag.git"
+  },
+  "homepage": "https://github.com/x0y14/onlytag#readme",
+  "bugs": {
+    "url": "https://github.com/x0y14/onlytag/issues"
+  },
   "files": [
     "dist",
     "README.md",
