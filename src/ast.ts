@@ -10,7 +10,7 @@ export type JsonValue = z.infer<typeof JsonValueSchema>
 export const DecorationSchema = z.object({
   name: z.string().regex(NAME_PATTERN),
 })
-/** デコレーションの型。英数字・ハイフン・アンダースコアからなる名前を持つ */
+/** デコレーションの型。先頭が英字で、以降は英数字・ハイフン・アンダースコアからなる名前を持つ */
 export type Decoration = z.infer<typeof DecorationSchema>
 
 /** placeholder のZodスキーマ。属性値の右辺に出現する静的な文字列代替 */
