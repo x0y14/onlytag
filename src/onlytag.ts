@@ -13,8 +13,6 @@ import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 import {
   NAME_PATTERN,
-  NAME_FIRST_CHAR_PATTERN,
-  NAME_REST_CHAR_PATTERN,
   NAME_FORMAT,
 } from "./naming.js"
 
@@ -31,20 +29,30 @@ function isWhitespace(ch: string): boolean {
 
 /**
  * 文字が名前の先頭文字として有効かどうかを判定する（英字のみ）
+ * charCodeAt による高速パス実装（tokenizer ホットループ用）
  * @param ch - 判定対象の1文字
  * @returns 先頭文字として有効であればtrue
  */
 function isNameFirstChar(ch: string): boolean {
-  return NAME_FIRST_CHAR_PATTERN.test(ch)
+  const c = ch.charCodeAt(0)
+  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122) // A-Z, a-z
 }
 
 /**
  * 文字が識別子に使用可能な文字（英数字・アンダースコア・ハイフン）かどうかを判定する
+ * charCodeAt による高速パス実装（tokenizer ホットループ用）
  * @param ch - 判定対象の1文字
  * @returns 識別子文字であればtrue
  */
 function isIdentChar(ch: string): boolean {
-  return NAME_REST_CHAR_PATTERN.test(ch)
+  const c = ch.charCodeAt(0)
+  return (
+    (c >= 65 && c <= 90) || // A-Z
+    (c >= 97 && c <= 122) || // a-z
+    (c >= 48 && c <= 57) || // 0-9
+    c === 95 || // _
+    c === 45 // -
+  )
 }
 
 /**
