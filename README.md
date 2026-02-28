@@ -2,15 +2,22 @@
 
 A tag-based notation parser for TypeScript. No raw text, no rendering — just structured parsing into a typed AST.
 
-## Install
+## Concepts
 
-```sh
-npm install onlytag
-```
+Tags in onlytag support the following concepts:
 
-The package is distributed as an ES module.
+- **Attribute** — attach data to a tag with `key=value` syntax. Values can be JSON values, placeholders, or groups
+- **Decoration** — flag-like modifier on a tag. Written as `.name`, carries no value
+- **Placeholder** — symbolic reference written as `$name`. Parsed only, no substitution
+- **Group** — parenthesized list of values with `(v1, v2, ...)` syntax
+- **Custom Delimiter** — define your own delimiter pairs instead of the default `<>`
+
 
 ## Quick Start
+
+```sh
+npm add onlytag
+```
 
 ```ts
 import { onlytag } from "onlytag"
@@ -35,23 +42,6 @@ console.log(ot.dump(doc))
 //  ]
 // }
 ```
-
-## How It Differs from HTML and XML
-
-| Aspect | HTML | XML | onlytag |
-|---|---|---|---|
-| Raw text between tags | Allowed | Allowed | Not allowed |
-| Attribute values | Strings | Strings | JSON, placeholder (`$name`), or group (`(...)`) |
-| Decorations (`.name`) | No equivalent | No equivalent | Built-in |
-| Custom delimiters | Fixed (`<`, `>`) | Fixed (`<`, `>`) | Configurable (e.g., `\|...\|`, `!...?`) |
-| Placeholders (`$name`) | No equivalent | No equivalent | Built-in (parse only, no substitution) |
-| Group values (`(v1, v2)`) | No equivalent | No equivalent | Built-in |
-| Output | DOM tree | DOM tree | Typed AST (`DocumentNode`) |
-| Rendering | Yes | Depends on processor | No — parse only |
-
-onlytag is not a replacement for HTML or XML. It is a tag-based notation designed for machine-readable, tag-only documents where every piece of data is expressed as a tag, an attribute value, or a decoration.
-
-## Concepts
 
 ### Tag
 
