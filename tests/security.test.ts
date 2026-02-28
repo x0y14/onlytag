@@ -1,5 +1,6 @@
 import { test, assert } from "vitest"
 import { onlytag } from "../src/onlytag.js"
+import { NAME_PATTERN, NAME_FIRST_CHAR_PATTERN, NAME_REST_CHAR_PATTERN } from "../src/naming.js"
 
 const ot = new onlytag()
 
@@ -55,4 +56,65 @@ test("security: __proto__ payload does not cause prototype pollution", () => {
 test("security: html-like payload is treated as plain string", () => {
   const doc = ot.parse(ot.tokenize('<A content="</script><img src=x onerror=alert(1)>" />'))
   assert.equal(doc.children[0].attributes["content"], "</script><img src=x onerror=alert(1)>")
+})
+
+// --- マルチバイト文字テスト ---
+
+// タグ名に日本語が含まれるとtokenize段でエラーになることを確認する
+test("security: Japanese tag name is rejected", () => {
+  assert.throws(
+    () => ot.tokenize("<日本語 />"),
+    /position=/,
+  )
+})
+
+// 属性名に絵文字が含まれるとtokenize段でエラーになることを確認する
+test("security: emoji attribute name is rejected", () => {
+  assert.throws(
+    () => ot.tokenize('<A 🔥=1 />'),
+    /position=/,
+  )
+})
+
+// デコレーション名にゼロ幅スペースが含まれるとtokenize段でエラーになることを確認する
+test("security: zero-width space in decoration name is rejected", () => {
+  assert.throws(
+    () => ot.tokenize("<A .\u200Bhidden />"),
+    /position=/,
+  )
+})
+
+// --- ReDoS テスト ---
+
+// NAME_PATTERNに対するバックトラッキング誘発入力が高速に処理されることを確認する
+test("security: NAME_PATTERN resists ReDoS with long input", () => {
+  const malicious = "a" + "-".repeat(100_000) + "!"
+  const startedAt = Date.now()
+  const result = NAME_PATTERN.test(malicious)
+  const elapsed = Date.now() - startedAt
+
+  assert.isFalse(result)
+  assert.isBelow(elapsed, 100)
+})
+
+// NAME_FIRST_CHAR_PATTERNに対するバックトラッキング誘発入力が高速に処理されることを確認する
+test("security: NAME_FIRST_CHAR_PATTERN resists ReDoS", () => {
+  const malicious = "a".repeat(100_000)
+  const startedAt = Date.now()
+  const result = NAME_FIRST_CHAR_PATTERN.test(malicious)
+  const elapsed = Date.now() - startedAt
+
+  assert.isFalse(result)
+  assert.isBelow(elapsed, 100)
+})
+
+// NAME_REST_CHAR_PATTERNに対するバックトラッキング誘発入力が高速に処理されることを確認する
+test("security: NAME_REST_CHAR_PATTERN resists ReDoS", () => {
+  const malicious = "a".repeat(100_000)
+  const startedAt = Date.now()
+  const result = NAME_REST_CHAR_PATTERN.test(malicious)
+  const elapsed = Date.now() - startedAt
+
+  assert.isFalse(result)
+  assert.isBelow(elapsed, 100)
 })
