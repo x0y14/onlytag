@@ -281,16 +281,7 @@ const doc = ot.parse(ot.tokenize(`<Button .primary text="Click me" />`))
 const json = ot.dump(doc)
 ```
 
-`dump` calls `JSON.stringify` on the `DocumentNode`. To deserialize, use `JSON.parse` and validate with the exported `DocumentNodeSchema`:
-
-```ts
-import { DocumentNodeSchema } from "onlytag"
-
-const parsed = DocumentNodeSchema.safeParse(JSON.parse(json))
-if (parsed.success) {
-  const doc = parsed.data // DocumentNode
-}
-```
+`dump` calls `JSON.stringify` on the `DocumentNode`.
 
 ## Limitations
 
