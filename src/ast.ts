@@ -6,11 +6,9 @@ export const JsonValueSchema = z.json()
 /** 任意のJSON値を表す型 */
 export type JsonValue = z.infer<typeof JsonValueSchema>
 
-/** デコレーション（タグに付与される修飾子）のZodスキーマ */
-export const DecorationSchema = z.object({
-  name: z.string().regex(NAME_PATTERN),
-})
-/** デコレーションの型。先頭が英字で、以降は英数字・ハイフン・アンダースコアからなる名前を持つ */
+/** デコレーション（タグに付与される修飾子）のZodスキーマ。文字列として保存される */
+export const DecorationSchema = z.string().regex(NAME_PATTERN)
+/** デコレーションの型。先頭が英字で、以降は英数字・ハイフン・アンダースコアからなる名前文字列 */
 export type Decoration = z.infer<typeof DecorationSchema>
 
 /** placeholder のZodスキーマ。属性値の右辺に出現する静的な文字列代替 */
@@ -57,7 +55,7 @@ export type AttributeValue = Placeholder | GroupValue | JsonValue
 export type ElementNode = {
   type: "element"
   name: string
-  decorations: Decoration[]
+  decorations: string[]
   attributes: Record<string, AttributeValue>
   children: ElementNode[]
   selfClosing: boolean

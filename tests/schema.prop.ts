@@ -63,7 +63,7 @@ const validDecorationNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
 test("schema decoration: accepts valid names", () => {
   fc.assert(
     fc.property(validDecorationNameArb, (name) => {
-      const result = DecorationSchema.safeParse({ name })
+      const result = DecorationSchema.safeParse(name)
       assert.isTrue(result.success)
     }),
   )
@@ -71,7 +71,7 @@ test("schema decoration: accepts valid names", () => {
 
 // 空文字列の装飾名はバリデーション失敗することを確認する
 test("schema decoration: rejects empty name", () => {
-  const result = DecorationSchema.safeParse({ name: "" })
+  const result = DecorationSchema.safeParse("")
   assert.isFalse(result.success)
 })
 
@@ -81,7 +81,7 @@ test("schema decoration: rejects names with invalid chars", () => {
 
   fc.assert(
     fc.property(invalidCharArb, (name) => {
-      const result = DecorationSchema.safeParse({ name })
+      const result = DecorationSchema.safeParse(name)
       assert.isFalse(result.success)
     }),
   )
@@ -316,7 +316,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
   node: fc.record({
     type: fc.constant("element" as const),
     name: tagNameArb,
-    decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
+    decorations: fc.uniqueArray(validDecorationNameArb, { maxLength: 3 }),
     attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
     selfClosing: fc.constant(false),
@@ -326,7 +326,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
 const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
   name: tagNameArb,
-  decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
+  decorations: fc.uniqueArray(validDecorationNameArb, { maxLength: 3 }),
   attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),
   selfClosing: fc.constant(true),

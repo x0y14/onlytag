@@ -34,7 +34,7 @@ const invalidJsonLiteralArb = fc.oneof(
 const selfClosingTagInputArb = fc
   .record({
     tag: identArb,
-    decorations: fc.array(identArb, { maxLength: 2 }),
+    decorations: fc.uniqueArray(identArb, { maxLength: 2 }),
     attributes: fc.array(fc.tuple(identArb, jsonLiteralArb), { maxLength: 3 }),
   })
   .map(({ tag, decorations, attributes }) => {

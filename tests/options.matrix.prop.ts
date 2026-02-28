@@ -58,7 +58,7 @@ const tagOnlyInputArb = tagNameArb.map((tag) => `<${tag} />`)
 
 /** カテゴリ B: decoration のみ */
 const decoOnlyInputArb = fc
-  .tuple(tagNameArb, fc.array(decorationArb, { minLength: 1, maxLength: 3 }))
+  .tuple(tagNameArb, fc.uniqueArray(decorationArb, { minLength: 1, maxLength: 3 }))
   .map(([tag, decos]) => `<${tag} ${decos.join(" ")} />`)
 
 /**
@@ -85,7 +85,7 @@ const attrOnlyInputArb = fc
 const bothInputArb = fc
   .tuple(
     tagNameArb,
-    fc.array(decorationArb, { minLength: 1, maxLength: 2 }),
+    fc.uniqueArray(decorationArb, { minLength: 1, maxLength: 2 }),
     fc.array(attributeArb, { minLength: 1, maxLength: 2 }),
   )
   .filter(([, , attrs]) => deduplicateAttrs(attrs).length >= 1)
