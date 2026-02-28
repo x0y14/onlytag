@@ -1,5 +1,11 @@
 export { onlytag } from "./onlytag.js"
 export {
+  NAME_PATTERN,
+  NAME_FIRST_CHAR_PATTERN,
+  NAME_REST_CHAR_PATTERN,
+  NAME_FORMAT,
+} from "./naming.js"
+export {
   type TagDelimiterPair,
   TagDelimiterPairSchema,
   type Options,

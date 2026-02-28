@@ -66,7 +66,7 @@ A tag is the fundamental unit of structure. There are three forms:
 | Closing | `</TagName>` | Ends the matching opening tag |
 | Self-closing | `<TagName />` | A complete element with no children |
 
-When parsing markup via `tokenize`/`parse`, tag names must start with a letter and may contain letters, digits, and hyphens (`[a-zA-Z][a-zA-Z0-9-]*`). Tag names are case-sensitive.
+All identifiers (tag names, attribute keys, decoration names, placeholder names) follow the same naming rule: they must start with a letter and may contain letters, digits, underscores, and hyphens (`[a-zA-Z][a-zA-Z0-9_-]*`). Tag names are case-sensitive.
 
 A document can have multiple top-level tags:
 
@@ -80,7 +80,7 @@ This produces a `DocumentNode` with three children.
 
 ### Attribute
 
-Attributes attach data to a tag using `key=value` syntax. The key follows identifier rules (letters, digits, `_`, `-`). The value must be one of the following:
+Attributes attach data to a tag using `key=value` syntax. The key follows the same naming rule as tag names (`[a-zA-Z][a-zA-Z0-9_-]*`). The value must be one of the following:
 
 **JSON values** — any valid JSON literal:
 
@@ -123,7 +123,7 @@ Decorations are flag-like annotations written as `.name` inside a tag. They carr
 <Card .elevated .rounded_lg />
 ```
 
-Decoration names may contain letters, digits, `_`, and `-`. Decorations and attributes can be freely interleaved:
+Decoration names follow the same naming rule as tag names (`[a-zA-Z][a-zA-Z0-9_-]*`). Decorations and attributes can be freely interleaved:
 
 ```
 <Widget .d1 count=1 .d2 enabled=true />

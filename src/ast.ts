@@ -1,11 +1,5 @@
 import { z } from "zod"
-
-/** デコレーション名のバリデーションパターン */
-const DECORATION_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
-/** プレースホルダー名のバリデーションパターン */
-const PLACEHOLDER_NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9-]*$/
-/** タグ名のスキーマバリデーションパターン */
-const TAG_NAME_SCHEMA_PATTERN = /^[A-Za-z0-9_-]+$/
+import { NAME_PATTERN } from "./naming.js"
 
 /** 任意のJSON値を受け付けるZodスキーマ */
 export const JsonValueSchema = z.json()
@@ -14,15 +8,15 @@ export type JsonValue = z.infer<typeof JsonValueSchema>
 
 /** デコレーション（タグに付与される修飾子）のZodスキーマ */
 export const DecorationSchema = z.object({
-  name: z.string().regex(DECORATION_NAME_PATTERN),
+  name: z.string().regex(NAME_PATTERN),
 })
-/** デコレーションの型。英数字・ハイフン・アンダースコアからなる名前を持つ */
+/** デコレーションの型。先頭が英字で、以降は英数字・ハイフン・アンダースコアからなる名前を持つ */
 export type Decoration = z.infer<typeof DecorationSchema>
 
 /** placeholder のZodスキーマ。属性値の右辺に出現する静的な文字列代替 */
 export const PlaceholderSchema = z.object({
   type: z.literal("placeholder"),
-  name: z.string().regex(PLACEHOLDER_NAME_PATTERN),
+  name: z.string().regex(NAME_PATTERN),
 })
 /** placeholder の型。$name 形式で指定される属性値代替 */
 export type Placeholder = z.infer<typeof PlaceholderSchema>
@@ -73,9 +67,9 @@ export type ElementNode = {
 export const ElementNodeSchema: z.ZodType<ElementNode> = z.lazy(() =>
   z.object({
     type: z.literal("element"),
-    tagName: z.string().regex(TAG_NAME_SCHEMA_PATTERN),
+    tagName: z.string().regex(NAME_PATTERN),
     decorations: z.array(DecorationSchema),
-    attributes: z.record(z.string(), AttributeValueSchema),
+    attributes: z.record(z.string().regex(NAME_PATTERN), AttributeValueSchema),
     children: z.array(ElementNodeSchema),
     selfClosing: z.boolean(),
   }),
