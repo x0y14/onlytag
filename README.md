@@ -66,7 +66,7 @@ A tag is the fundamental unit of structure. There are three forms:
 | Closing      | `</TagName>`  | Ends the matching opening tag            |
 | Self-closing | `<TagName />` | A complete element with no children      |
 
-When parsing markup via `tokenize`/`parse`, all names (tag names, decoration names, attribute keys, and placeholder names) must match `[a-zA-Z][a-zA-Z0-9_-]*`. Names are case-sensitive. When deserializing a pre-built AST via `load()`, the same validation rules apply.
+When parsing markup via `tokenize`/`parse`, all names (tag names, decoration names, attribute keys, and placeholder names) must match `[a-zA-Z][a-zA-Z0-9_-]*`. Names are case-sensitive. When deserializing a pre-built AST via `load()`, the same validation rules apply (so AST JSON with non-conforming names will be rejected).
 
 A document can have multiple top-level tags:
 
