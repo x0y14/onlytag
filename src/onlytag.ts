@@ -13,7 +13,6 @@ import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 import {
-  PLACEHOLDER_FIRST_CHAR_PATTERN,
   PLACEHOLDER_CHAR_PATTERN,
   isValidName,
 } from "./naming.js"
@@ -203,15 +202,17 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
   const start = pos
   pos++ // $ をスキップ
 
-  if (pos >= len || !PLACEHOLDER_FIRST_CHAR_PATTERN.test(input[pos])) {
-    const actual = pos < len ? input[pos] : "<eof>"
+  const nameStart = pos
+  while (pos < len && PLACEHOLDER_CHAR_PATTERN.test(input[pos])) pos++
+  const name = input.slice(nameStart, pos)
+
+  if (!isValidName(name)) {
+    const actual = name.length > 0 ? name[0] : nameStart < len ? input[nameStart] : "<eof>"
     tokenError(
       `invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9_-]*>, actual=<$${actual}>`,
       start,
     )
   }
-
-  while (pos < len && PLACEHOLDER_CHAR_PATTERN.test(input[pos])) pos++
 
   return [input.slice(start, pos), pos]
 }
@@ -616,7 +617,13 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           )
         }
         const deco = advance()
-        const decoName = deco.value.startsWith(".") ? deco.value.slice(1) : deco.value
+        if (!deco.value.startsWith(".")) {
+          parseError(
+            `invalid decoration token: expected value to start with ".", actual=<${deco.value}>`,
+            deco.position,
+          )
+        }
+        const decoName = deco.value.slice(1)
         if (!isValidName(decoName)) {
           parseError(
             `invalid decoration name: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${decoName}>`,

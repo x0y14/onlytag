@@ -1,9 +1,6 @@
 /** tagname / decoration / attribute / placeholder で使用できる名前のバリデーションパターン */
 export const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 
-/** プレースホルダー先頭文字のバリデーションパターン */
-export const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
-
 /** プレースホルダー後続文字のバリデーションパターン */
 export const PLACEHOLDER_CHAR_PATTERN = /[a-zA-Z0-9_-]/
 
