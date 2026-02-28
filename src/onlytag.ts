@@ -189,7 +189,7 @@ function readJsonValue(
 }
 
 /**
- * 入力文字列から placeholder を読み取る。$[a-zA-Z][a-zA-Z0-9-]* の形式
+ * 入力文字列から placeholder を読み取る。$[a-zA-Z][a-zA-Z0-9_-]* の形式
  * @param input - 入力文字列全体
  * @param pos - 読み取り開始位置（$ の位置）
  * @returns ドル記号を含む placeholder 文字列と読み取り後の位置のタプル

@@ -87,6 +87,10 @@ test("schema decoration: rejects names with invalid chars", () => {
   )
 })
 
+// --- 属性キー関連 ---
+
+const validAttributeKeyArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
+
 // --- Placeholder関連 ---
 
 const validPlaceholderNameArb = fc.stringMatching(/^[a-zA-Z][a-zA-Z0-9_-]*$/)
@@ -313,7 +317,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
     type: fc.constant("element" as const),
     tagName: tagNameArb,
     decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
-    attributes: fc.dictionary(validDecorationNameArb, flatAttributeValueArb, { maxKeys: 3 }),
+    attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
     selfClosing: fc.constant(false),
   }),
@@ -323,7 +327,7 @@ const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
   tagName: tagNameArb,
   decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
-  attributes: fc.dictionary(validDecorationNameArb, flatAttributeValueArb, { maxKeys: 3 }),
+  attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),
   selfClosing: fc.constant(true),
 })
