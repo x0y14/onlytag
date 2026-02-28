@@ -19,24 +19,21 @@ const ot = new onlytag()
 
 const tokens = ot.tokenize(`<Button .primary text="Click me" />`)
 const doc = ot.parse(tokens)
-```
 
-`doc` is a `DocumentNode`:
-
-```json
-{
-  "type": "document",
-  "children": [
-    {
-      "type": "element",
-      "name": "Button",
-      "decorations": [{ "name": "primary" }],
-      "attributes": { "text": "Click me" },
-      "children": [],
-      "selfClosing": true
-    }
-  ]
-}
+console.log(ot.dump(doc))
+// {
+//  "type": "document",
+//  "children": [
+//    {
+//      "type": "element",
+//      "name": "Button",
+//      "decorations": [{ "name": "primary" }],
+//      "attributes": { "text": "Click me" },
+//      "children": [],
+//      "selfClosing": true
+//    }
+//  ]
+// }
 ```
 
 ## How It Differs from HTML and XML
@@ -291,7 +288,3 @@ const json = ot.dump(doc)
 - No placeholder substitution — `$name` placeholders are parsed into the AST but not replaced or resolved
 - No rendering or execution — onlytag is a parser only; interpretation of the AST is the consumer's responsibility
 - No template engine features — no loops, conditionals, or includes
-
-## License
-
-MIT
