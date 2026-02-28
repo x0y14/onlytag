@@ -110,6 +110,33 @@ test("tokenizer error: placeholder disallowed when allowPlaceholders=false", () 
   assert.match((error as Error).message, /position|pos|index|offset/i)
 })
 
+// --- 先頭文字制約のエラーケース ---
+
+// デコレーション名が数字で始まる場合は失敗することを確認する
+test("tokenizer error: decoration starting with digit fails", () => {
+  expectTokenizerErrorWithPosition("<A .1bad />")
+})
+
+// デコレーション名がアンダースコアで始まる場合は失敗することを確認する
+test("tokenizer error: decoration starting with underscore fails", () => {
+  expectTokenizerErrorWithPosition("<A ._bad />")
+})
+
+// 識別子（属性名）が数字で始まる場合は失敗することを確認する
+test("tokenizer error: identifier starting with digit fails", () => {
+  expectTokenizerErrorWithPosition("<A 1x=1 />")
+})
+
+// 識別子（属性名）がアンダースコアで始まる場合は失敗することを確認する
+test("tokenizer error: identifier starting with underscore fails", () => {
+  expectTokenizerErrorWithPosition("<A _x=1 />")
+})
+
+// 識別子（属性名）がハイフンで始まる場合は失敗することを確認する
+test("tokenizer error: identifier starting with hyphen fails", () => {
+  expectTokenizerErrorWithPosition("<A -x=1 />")
+})
+
 // --- カスタムデリミタのエラーケース ---
 
 // 属性値に JSON として不正かつ境界でもない文字がある場合は失敗することを確認する
