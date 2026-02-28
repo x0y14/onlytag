@@ -50,6 +50,14 @@ test("parser: parses decorations", () => {
   assert.equal(card.decorations[1].name, "rounded_lg")
 })
 
+// デコレーション名でアンダースコア/ハイフンが使用できることを確認する
+test("parser: parses decoration names with underscore and hyphen", () => {
+  const doc = ot.parse(ot.tokenize("<Card .d_1-foo />"))
+  const card = doc.children[0]
+  assert.equal(card.decorations.length, 1)
+  assert.equal(card.decorations[0].name, "d_1-foo")
+})
+
 // 属性の後ろにデコレーションが続いても解析できることを確認する
 test("parser: parses decoration after attribute", () => {
   const doc = ot.parse(ot.tokenize('<Badge label="new" .primary />'))

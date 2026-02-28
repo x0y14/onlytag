@@ -66,7 +66,7 @@ A tag is the fundamental unit of structure. There are three forms:
 | Closing | `</TagName>` | Ends the matching opening tag |
 | Self-closing | `<TagName />` | A complete element with no children |
 
-Tag names must match `[a-zA-Z][a-zA-Z0-9_-]*` (start with a letter; then letters, digits, `_`, `-`). Tag names are case-sensitive.
+Tag names must match `[a-zA-Z][a-zA-Z0-9_-]*` (start with a letter; then letters, digits, `_`, `-`). Tag names are case-sensitive. The same validation is applied when deserializing a pre-built AST via `load()` — ASTs with non-conforming names will be rejected.
 
 A document can have multiple top-level tags:
 
