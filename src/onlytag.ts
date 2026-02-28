@@ -32,11 +32,24 @@ function isWhitespace(ch: string): boolean {
 }
 
 /**
- * 文字が識別子に使用可能な文字（英数字・アンダースコア・ハイフン）かどうかを判定する
+ * 文字が名前の先頭文字（英字）として有効かどうかを判定する
  * @param ch - 判定対象の1文字
- * @returns 識別子文字であればtrue
+ * @returns 先頭文字として有効であればtrue
  */
-function isIdentChar(ch: string): boolean {
+function isNameFirstChar(ch: string): boolean {
+  const c = ch.charCodeAt(0)
+  return (
+    (c >= 65 && c <= 90) || // 英大文字
+    (c >= 97 && c <= 122) // 英小文字
+  )
+}
+
+/**
+ * 文字が名前の後続文字（英数字・アンダースコア・ハイフン）として有効かどうかを判定する
+ * @param ch - 判定対象の1文字
+ * @returns 後続文字として有効であればtrue
+ */
+function isNameChar(ch: string): boolean {
   const c = ch.charCodeAt(0)
   return (
     (c >= 65 && c <= 90) || // 英大文字
@@ -401,14 +414,14 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
 
       if (ch === ".") {
         pos += 1
-        if (pos < len && isIdentChar(input[pos])) {
+        if (pos < len && isNameChar(input[pos])) {
           if (!options.allowDecorations) {
             tokenError(`decorations are not allowed: found decoration at position`, start)
           }
           const identStart = pos
-          while (pos < len && isIdentChar(input[pos])) pos++
+          while (pos < len && isNameChar(input[pos])) pos++
           const decoration = input.slice(identStart, pos)
-          if (!NAME_PATTERN.test(decoration)) {
+          if (!isNameFirstChar(decoration[0]!)) {
             tokenError(
               `invalid decoration token: expected=<.[a-zA-Z][a-zA-Z0-9_-]*>, actual=<.${decoration}>`,
               start,
@@ -431,10 +444,10 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         tokenError(`invalid slash token: expected=</${closing}>, actual=</${next}>`, pos)
       }
 
-      if (isIdentChar(ch)) {
-        while (pos < len && isIdentChar(input[pos])) pos++
+      if (isNameChar(ch)) {
+        while (pos < len && isNameChar(input[pos])) pos++
         const ident = input.slice(start, pos)
-        if (!NAME_PATTERN.test(ident)) {
+        if (!isNameFirstChar(ident[0]!)) {
           tokenError(
             `invalid identifier: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${ident}>`,
             start,

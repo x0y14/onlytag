@@ -65,7 +65,10 @@ export type ElementNode = {
   selfClosing: boolean
 }
 
-/** 要素ノードの再帰的なZodスキーマ。子要素として自身を含むことができる */
+/**
+ * 要素ノードの再帰的なZodスキーマ。子要素として自身を含むことができる
+ * tagName・decorations.name・attributes のキーはいずれも NAME_PATTERN にマッチする必要がある
+ */
 export const ElementNodeSchema: z.ZodType<ElementNode> = z.lazy(() =>
   z.object({
     type: z.literal("element"),
