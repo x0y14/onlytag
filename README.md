@@ -1,6 +1,6 @@
 # onlytag
 
-A tag-only markup language parser for TypeScript. No raw text, no rendering — just structured parsing into a typed AST.
+A tag-based notation parser for TypeScript. No raw text, no rendering — just structured parsing into a typed AST.
 
 ## Install
 
@@ -49,7 +49,7 @@ console.log(ot.dump(doc))
 | Output | DOM tree | DOM tree | Typed AST (`DocumentNode`) |
 | Rendering | Yes | Depends on processor | No — parse only |
 
-onlytag is not a replacement for HTML or XML. It is a structured markup language designed for machine-readable, tag-only documents where every piece of data is expressed as a tag, an attribute value, or a decoration.
+onlytag is not a replacement for HTML or XML. It is a tag-based notation designed for machine-readable, tag-only documents where every piece of data is expressed as a tag, an attribute value, or a decoration.
 
 ## Concepts
 

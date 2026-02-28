@@ -1,11 +1,11 @@
 {
   "name": "onlytag",
   "version": "0.1.0",
-  "description": "onlytag is a simple markup with three kinds of tags, JSON attributes, and decorations.",
+  "description": "onlytag is a tag-based notation with three kinds of tags, JSON attributes, and decorations.",
   "keywords": [
     "json",
     "lexer",
-    "markup",
+    "notation",
     "parser",
     "tags",
     "tokenizer"
