@@ -285,10 +285,10 @@ const json = ot.dump(doc)
 
 ## Limitations
 
-- [x] No raw text between tags — all content must be expressed as tags, attributes, or decorations
-- [x] No placeholder substitution — `$name` placeholders are parsed into the AST but not replaced or resolved
-- [x] No rendering or execution — onlytag is a parser only; interpretation of the AST is the consumer's responsibility
-- [x] No template engine features — no loops, conditionals, or includes
+- No raw text between tags — all content must be expressed as tags, attributes, or decorations
+- No placeholder substitution — `$name` placeholders are parsed into the AST but not replaced or resolved
+- No rendering or execution — onlytag is a parser only; interpretation of the AST is the consumer's responsibility
+- No template engine features — no loops, conditionals, or includes
 
 ## License
 
