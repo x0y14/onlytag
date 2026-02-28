@@ -7,6 +7,7 @@ const optionsArb = fc.record({
   allowDecorations: fc.boolean(),
   allowAttributes: fc.boolean(),
   allowPlaceholders: fc.boolean(),
+  allowGroup: fc.boolean(),
 })
 
 /** 有効な識別子 */
@@ -192,11 +193,11 @@ const groupWithPlaceholderInputArb = fc
   .filter(([, attrs]) => deduplicateAttrs(attrs).length >= 1)
   .map(([tag, attrs]) => `<${tag} ${deduplicateAttrs(attrs).join(" ")} />`)
 
-test("options property: カテゴリ F（グループ値 + placeholder）は allowAttributes=true かつ allowPlaceholders=true でのみ成功する", () => {
+test("options property: カテゴリ F（グループ値 + placeholder）は allowAttributes かつ allowPlaceholders かつ allowGroup でのみ成功する", () => {
   fc.assert(
     fc.property(optionsArb, groupWithPlaceholderInputArb, (options, input) => {
       const ot = new onlytag(options)
-      if (options.allowAttributes && options.allowPlaceholders) {
+      if (options.allowAttributes && options.allowPlaceholders && options.allowGroup) {
         const tokens = ot.tokenize(input)
         const document = ot.parse(tokens)
         assert.strictEqual(document.type, "document")
@@ -218,11 +219,11 @@ const groupJsonOnlyInputArb = fc
   .filter(([, attrs]) => deduplicateAttrs(attrs).length >= 1)
   .map(([tag, attrs]) => `<${tag} ${deduplicateAttrs(attrs).join(" ")} />`)
 
-test("options property: カテゴリ G（グループ値 JSON のみ）は allowAttributes=true でのみ成功する", () => {
+test("options property: カテゴリ G（グループ値 JSON のみ）は allowAttributes かつ allowGroup でのみ成功する", () => {
   fc.assert(
     fc.property(optionsArb, groupJsonOnlyInputArb, (options, input) => {
       const ot = new onlytag(options)
-      if (options.allowAttributes) {
+      if (options.allowAttributes && options.allowGroup) {
         const tokens = ot.tokenize(input)
         const document = ot.parse(tokens)
         assert.strictEqual(document.type, "document")
