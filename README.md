@@ -29,7 +29,7 @@ const doc = ot.parse(tokens)
   "children": [
     {
       "type": "element",
-      "tagName": "Button",
+      "name": "Button",
       "decorations": [{ "name": "primary" }],
       "attributes": { "text": "Click me" },
       "children": [],

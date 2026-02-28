@@ -56,7 +56,7 @@ export type AttributeValue = Placeholder | GroupValue | JsonValue
 /** 要素ノードの型。タグ名・デコレーション・属性・子要素を持つ */
 export type ElementNode = {
   type: "element"
-  tagName: string
+  name: string
   decorations: Decoration[]
   attributes: Record<string, AttributeValue>
   children: ElementNode[]
@@ -67,7 +67,7 @@ export type ElementNode = {
 export const ElementNodeSchema: z.ZodType<ElementNode> = z.lazy(() =>
   z.object({
     type: z.literal("element"),
-    tagName: z.string().regex(NAME_PATTERN),
+    name: z.string().regex(NAME_PATTERN),
     decorations: z.array(DecorationSchema),
     attributes: z.record(z.string().regex(NAME_PATTERN), AttributeValueSchema),
     children: z.array(ElementNodeSchema),

@@ -54,14 +54,14 @@ test("parser error: eof before closing tag fails", () => {
 test("parser error: tag name with underscore succeeds", () => {
   const ot2 = new onlytag()
   const doc = ot2.parse(ot2.tokenize("<A_b />"))
-  assert.strictEqual(doc.children[0].tagName, "A_b")
+  assert.strictEqual(doc.children[0].name, "A_b")
 })
 
 // 閉じタグ名にアンダースコアを含む入力は成功することを確認する
 test("parser error: closing tag name with underscore succeeds", () => {
   const ot2 = new onlytag()
   const doc = ot2.parse(ot2.tokenize("<A_b></A_b>"))
-  assert.strictEqual(doc.children[0].tagName, "A_b")
+  assert.strictEqual(doc.children[0].name, "A_b")
 })
 
 // タグ名が先頭アンダースコアの入力は失敗することを確認する

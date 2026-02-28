@@ -802,7 +802,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
       nestingDepth--
       return {
         type: "element",
-        tagName,
+        name: tagName,
         decorations,
         attributes,
         children: [],
@@ -866,7 +866,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
     nestingDepth--
     return {
       type: "element",
-      tagName,
+      name: tagName,
       decorations,
       attributes,
       children,

@@ -8,7 +8,7 @@ test("parser: parses single self-closing tag", () => {
   const doc = ot.parse(ot.tokenize("<Br />"))
   assert.equal(doc.type, "document")
   assert.equal(doc.children.length, 1)
-  assert.equal(doc.children[0].tagName, "Br")
+  assert.equal(doc.children[0].name, "Br")
   assert.equal(doc.children[0].selfClosing, true)
   assert.equal(doc.children[0].children.length, 0)
 })
@@ -17,7 +17,7 @@ test("parser: parses single self-closing tag", () => {
 test("parser: parses empty open-close pair", () => {
   const doc = ot.parse(ot.tokenize("<Div></Div>"))
   assert.equal(doc.children.length, 1)
-  assert.equal(doc.children[0].tagName, "Div")
+  assert.equal(doc.children[0].name, "Div")
   assert.equal(doc.children[0].selfClosing, false)
   assert.equal(doc.children[0].children.length, 0)
 })
@@ -27,9 +27,9 @@ test("parser: parses nested elements", () => {
   const doc = ot.parse(ot.tokenize("<Parent><Child /></Parent>"))
   assert.equal(doc.children.length, 1)
   const parent = doc.children[0]
-  assert.equal(parent.tagName, "Parent")
+  assert.equal(parent.name, "Parent")
   assert.equal(parent.children.length, 1)
-  assert.equal(parent.children[0].tagName, "Child")
+  assert.equal(parent.children[0].name, "Child")
   assert.equal(parent.children[0].selfClosing, true)
 })
 
@@ -105,9 +105,9 @@ test("parser: parses array attribute", () => {
 test("parser: parses multiple root elements", () => {
   const doc = ot.parse(ot.tokenize("<A /><B /><C />"))
   assert.equal(doc.children.length, 3)
-  assert.equal(doc.children[0].tagName, "A")
-  assert.equal(doc.children[1].tagName, "B")
-  assert.equal(doc.children[2].tagName, "C")
+  assert.equal(doc.children[0].name, "A")
+  assert.equal(doc.children[1].name, "B")
+  assert.equal(doc.children[2].name, "C")
 })
 
 // READMEのCharacter完全例を解析できることを確認する
@@ -132,35 +132,35 @@ test("parser: parses complete README Character example", () => {
   assert.equal(doc.children.length, 1)
 
   const character = doc.children[0]
-  assert.equal(character.tagName, "Character")
+  assert.equal(character.name, "Character")
   assert.equal(character.decorations.length, 2)
   assert.equal(character.decorations[0].name, "hero")
   assert.equal(character.decorations[1].name, "rare_ssr")
   assert.equal(character.children.length, 3)
 
   const identity = character.children[0]
-  assert.equal(identity.tagName, "Identity")
+  assert.equal(identity.name, "Identity")
   assert.equal(identity.attributes["name"], "Lumina")
   assert.equal(identity.attributes["level"], 42)
   assert.equal(identity.selfClosing, true)
 
   const stats = character.children[1]
-  assert.equal(stats.tagName, "Stats")
+  assert.equal(stats.name, "Stats")
   assert.deepStrictEqual(stats.attributes["base"], { hp: 1500, mp: 800 })
   assert.deepStrictEqual(stats.attributes["modifiers"], [1.2, 0.9, 1.05])
 
   const inventory = character.children[2]
-  assert.equal(inventory.tagName, "Inventory")
+  assert.equal(inventory.name, "Inventory")
   assert.equal(inventory.children.length, 2)
 
   const weapon = inventory.children[0]
-  assert.equal(weapon.tagName, "Weapon")
+  assert.equal(weapon.name, "Weapon")
   assert.equal(weapon.decorations[0].name, "enchanted")
   assert.equal(weapon.attributes["id"], "w-99")
   assert.equal(weapon.attributes["durability"], 0.85)
 
   const skills = inventory.children[1]
-  assert.equal(skills.tagName, "Skills")
+  assert.equal(skills.name, "Skills")
   assert.deepStrictEqual(skills.attributes["active"], [
     { name: "Fireball", damage: 250 },
     { name: "Heal", amount: 100 },
@@ -180,7 +180,7 @@ test("parser: accepts allowed identifier characters", () => {
   const doc = ot.parse(ot.tokenize('<A1-b .d_2-e k_3-f={"x":1} />'))
   assert.equal(doc.children.length, 1)
   const node = doc.children[0]
-  assert.equal(node.tagName, "A1-b")
+  assert.equal(node.name, "A1-b")
   assert.equal(node.decorations[0].name, "d_2-e")
   assert.deepStrictEqual(node.attributes["k_3-f"], { x: 1 })
 })
@@ -202,8 +202,8 @@ test("parser: parses multiple roots with mixed whitespace", () => {
   `
   const doc = ot.parse(ot.tokenize(input))
   assert.equal(doc.children.length, 3)
-  assert.equal(doc.children[1].tagName, "B")
-  assert.equal(doc.children[1].children[0].tagName, "C")
+  assert.equal(doc.children[1].name, "B")
+  assert.equal(doc.children[1].children[0].name, "C")
 })
 
 // READMEのEvent例を複数ルートとして解析できることを確認する
@@ -225,9 +225,9 @@ test("parser: parses README Event example as multiple roots", () => {
 
   const doc = ot.parse(ot.tokenize(input))
   assert.equal(doc.children.length, 3)
-  assert.equal(doc.children[0].tagName, "Event")
+  assert.equal(doc.children[0].name, "Event")
   assert.equal(doc.children[1].decorations[1].name, "low_priority")
-  assert.equal(doc.children[2].children[1].tagName, "Stacktrace")
+  assert.equal(doc.children[2].children[1].name, "Stacktrace")
 })
 
 // JSON属性の直後が/>でも構文解析できることを確認する
@@ -337,7 +337,7 @@ test("parser: pipe delimiter self-closing tag", () => {
   const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
   const doc = otPipe.parse(otPipe.tokenize("|Br /|"))
   assert.equal(doc.children.length, 1)
-  assert.equal(doc.children[0].tagName, "Br")
+  assert.equal(doc.children[0].name, "Br")
   assert.equal(doc.children[0].selfClosing, true)
 })
 
@@ -346,7 +346,7 @@ test("parser: pipe delimiter open-close pair", () => {
   const otPipe = new onlytag({ tags: [{ opening: "|", closing: "|" }] })
   const doc = otPipe.parse(otPipe.tokenize("|Div|| /Div|"))
   assert.equal(doc.children.length, 1)
-  assert.equal(doc.children[0].tagName, "Div")
+  assert.equal(doc.children[0].name, "Div")
   assert.equal(doc.children[0].selfClosing, false)
 })
 
@@ -356,9 +356,9 @@ test("parser: pipe delimiter nested elements", () => {
   const doc = otPipe.parse(otPipe.tokenize("|Parent||Child /|| /Parent|"))
   assert.equal(doc.children.length, 1)
   const parent = doc.children[0]
-  assert.equal(parent.tagName, "Parent")
+  assert.equal(parent.name, "Parent")
   assert.equal(parent.children.length, 1)
-  assert.equal(parent.children[0].tagName, "Child")
+  assert.equal(parent.children[0].name, "Child")
   assert.equal(parent.children[0].selfClosing, true)
 })
 
@@ -367,7 +367,7 @@ test("parser: custom delimiter with attributes", () => {
   const otPercent = new onlytag({ tags: [{ opening: "%", closing: "%" }] })
   const doc = otPercent.parse(otPercent.tokenize('%Identity name="Lumina" level=42 /%'))
   const node = doc.children[0]
-  assert.equal(node.tagName, "Identity")
+  assert.equal(node.name, "Identity")
   assert.equal(node.attributes["name"], "Lumina")
   assert.equal(node.attributes["level"], 42)
 })
@@ -410,7 +410,7 @@ test("parser: multiple delimiter pairs nested parsing", () => {
   const doc = otMulti.parse(otMulti.tokenize("<Parent>!Child /?</Parent>"))
   assert.equal(doc.children.length, 1)
   const parent = doc.children[0]
-  assert.equal(parent.tagName, "Parent")
+  assert.equal(parent.name, "Parent")
   assert.equal(parent.children.length, 1)
-  assert.equal(parent.children[0].tagName, "Child")
+  assert.equal(parent.children[0].name, "Child")
 })

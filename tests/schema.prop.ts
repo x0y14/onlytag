@@ -315,7 +315,7 @@ const flatAttributeValueArb = fc.oneof(
 const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
   node: fc.record({
     type: fc.constant("element" as const),
-    tagName: tagNameArb,
+    name: tagNameArb,
     decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
     attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
     children: fc.array(tie("node"), { maxLength: 1, size: "small" }),
@@ -325,7 +325,7 @@ const elementNodeArb: fc.Arbitrary<unknown> = fc.letrec((tie) => ({
 
 const selfClosingElementNodeArb = fc.record({
   type: fc.constant("element" as const),
-  tagName: tagNameArb,
+  name: tagNameArb,
   decorations: fc.array(fc.record({ name: validDecorationNameArb }), { maxLength: 3 }),
   attributes: fc.dictionary(validAttributeKeyArb, flatAttributeValueArb, { maxKeys: 3 }),
   children: fc.constant([] as unknown[]),

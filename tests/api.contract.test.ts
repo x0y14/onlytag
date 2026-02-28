@@ -30,7 +30,7 @@ test("api contract: parse returns document node", () => {
   const doc = ot.parse(tokens)
   assert.equal(doc.type, "document")
   assert.equal(doc.children.length, 1)
-  assert.equal(doc.children[0].tagName, "A")
+  assert.equal(doc.children[0].name, "A")
 })
 
 // 公開されているスキーマが最小構成の値を受理することを確認する
@@ -44,7 +44,7 @@ test("api contract: schemas accept minimal valid values", () => {
 
   const elementResult = onlytagModule.ElementNodeSchema.safeParse({
     type: "element",
-    tagName: "A",
+    name: "A",
     decorations: [],
     attributes: {},
     children: [],
@@ -88,7 +88,7 @@ test("api contract: dump serializes document node to json string", () => {
   const parsed = JSON.parse(json)
   assert.equal(parsed.type, "document")
   assert.equal(parsed.children.length, 1)
-  assert.equal(parsed.children[0].tagName, "A")
+  assert.equal(parsed.children[0].name, "A")
   assert.equal(parsed.children[0].decorations[0].name, "bold")
   assert.equal(parsed.children[0].attributes.text, "hello")
 })
