@@ -45,6 +45,8 @@ function isIdentChar(ch: string): boolean {
 }
 
 // Note: use isIdentStartChar for the first character and isIdentChar for subsequent ones to enforce NAME_PATTERN.
+// isIdentChar intentionally allows a superset for non-leading positions; NAME_PATTERN (see naming.ts) is the
+// canonical rule for tag/deco/attr/ph names.
 
 /**
  * 文字が識別子の先頭に使用可能な文字（英字）かどうかを判定する
@@ -207,7 +209,7 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
   const name = input.slice(nameStart, pos)
 
   if (!isValidName(name)) {
-    const actual = name.length > 0 ? name[0] : nameStart < len ? input[nameStart] : "<eof>"
+    const actual = name.length > 0 ? name : nameStart < len ? input[nameStart] : "<eof>"
     tokenError(
       `invalid placeholder: expected=<$[a-zA-Z][a-zA-Z0-9_-]*>, actual=<$${actual}>`,
       start,
@@ -437,9 +439,12 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
 
       if (isIdentChar(ch)) {
         if (!isIdentStartChar(ch)) {
+          let identEnd = pos
+          while (identEnd < len && isIdentChar(input[identEnd])) identEnd++
+          const ident = input.slice(start, identEnd)
           tokenError(
-            `invalid identifier token: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${ch}>`,
-            pos,
+            `invalid identifier token: expected=<[a-zA-Z][a-zA-Z0-9_-]*>, actual=<${ident}>`,
+            start,
           )
         }
         while (pos < len && isIdentChar(input[pos])) pos++
