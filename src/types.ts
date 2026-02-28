@@ -35,7 +35,7 @@ export const TagDelimiterPairSchema = z.object({
 })
 
 /**
- * 機能オプション。decoration・attribute・placeholder の使用可否を設定する
+ * 機能オプション
  * @param allowDecorations - decoration（.name）の使用を許可するか。省略時は true
  * @param allowAttributes - attribute（key=value）の使用を許可するか。省略時は true
  * @param allowPlaceholders - placeholder（key=$name）の使用を許可するか。省略時は true

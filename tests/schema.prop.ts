@@ -429,8 +429,10 @@ test("schema normalized feature options: rejects non-boolean values", () => {
     allowDecorations: "yes",
     allowAttributes: 1,
     allowPlaceholders: "no",
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
+    maxNestingDepth: 1024,
     tags: [{ opening: "<", closing: ">" }],
   })
   assert.isFalse(result.success)
@@ -442,8 +444,10 @@ test("schema normalized feature options: rejects empty tags array", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
+    maxNestingDepth: 1024,
     tags: [],
   })
   assert.isFalse(result.success)
@@ -455,8 +459,10 @@ test("schema normalized feature options: rejects tags with disallowed characters
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
+    maxNestingDepth: 1024,
     tags: [{ opening: "a", closing: ">" }],
   })
   assert.isFalse(result.success)
@@ -468,8 +474,10 @@ test("schema normalized feature options: rejects tags with duplicate characters 
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
+    maxNestingDepth: 1024,
     tags: [
       { opening: "<", closing: ">" },
       { opening: "<", closing: "!" },
@@ -484,8 +492,10 @@ test("schema normalized feature options: rejects missing tags", () => {
     allowDecorations: true,
     allowAttributes: true,
     allowPlaceholders: true,
+    allowGroup: true,
     allowMixedDelimiters: true,
     allowInconsistentClosures: true,
+    maxNestingDepth: 1024,
   })
   assert.isFalse(result.success)
 })
