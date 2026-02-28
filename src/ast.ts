@@ -1,7 +1,5 @@
 import { z } from "zod"
-
-/** 名前（tagname / deco / attr / placeholder）に使用できる文字列パターン */
-const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
+import { NAME_PATTERN } from "./namePattern.js"
 
 /** 任意のJSON値を受け付けるZodスキーマ */
 export const JsonValueSchema = z.json()

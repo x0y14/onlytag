@@ -12,9 +12,8 @@ import { DocumentNodeSchema } from "./ast.js"
 import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
+import { NAME_PATTERN } from "./namePattern.js"
 
-/** 名前（tagname / deco / attr / placeholder）に使用できる文字列パターン */
-const NAME_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
 /** プレースホルダー先頭文字のバリデーションパターン */
 const PLACEHOLDER_FIRST_CHAR_PATTERN = /[a-zA-Z]/
 /** プレースホルダー後続文字のバリデーションパターン */
