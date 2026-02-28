@@ -46,6 +46,7 @@ function isNameFirstChar(ch: string): boolean {
 
 /**
  * 文字が名前の後続文字（英数字・アンダースコア・ハイフン）として有効かどうかを判定する
+ * 先頭文字の検証には isNameFirstChar を使用する
  * @param ch - 判定対象の1文字
  * @returns 後続文字として有効であればtrue
  */

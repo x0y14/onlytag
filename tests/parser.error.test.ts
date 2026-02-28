@@ -70,9 +70,19 @@ test("parser error: attribute name starting with digit fails", () => {
   expectParserErrorWithPosition("<A 1x=1 />")
 })
 
+// 属性名がアンダースコアで始まる入力は失敗することを確認する
+test("parser error: attribute name starting with underscore fails", () => {
+  expectParserErrorWithPosition("<A _x=1 />")
+})
+
 // デコレーション名が数字で始まる入力は失敗することを確認する
 test("parser error: decoration name starting with digit fails", () => {
   expectParserErrorWithPosition("<A .1hot />")
+})
+
+// デコレーション名がアンダースコアで始まる入力は失敗することを確認する
+test("parser error: decoration name starting with underscore fails", () => {
+  expectParserErrorWithPosition("<A ._hot />")
 })
 test("parser error: missing equals before decoration fails", () => {
   let error: unknown
