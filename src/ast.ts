@@ -1,6 +1,14 @@
 import { z } from "zod"
 import { NAME_PATTERN } from "./naming.js"
 
+function getOwnTypeDiscriminator(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined
+  if (!Object.prototype.hasOwnProperty.call(value, "type")) return undefined
+
+  const { type } = value as { type?: unknown }
+  return typeof type === "string" ? type : undefined
+}
+
 /** 任意のJSON値を受け付けるZodスキーマ */
 export const JsonValueSchema = z.json()
 /** 任意のJSON値を表す型 */
@@ -27,8 +35,7 @@ export type Placeholder = z.infer<typeof PlaceholderSchema>
  */
 const JsonNonPlaceholderValueSchema = JsonValueSchema.refine(
   (value) => {
-    if (!value || typeof value !== "object") return true
-    const type = (value as any).type
+    const type = getOwnTypeDiscriminator(value)
     return type !== "placeholder" && type !== "group"
   },
   {

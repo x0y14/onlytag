@@ -13,7 +13,8 @@ import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
 import {
-  PLACEHOLDER_CHAR_PATTERN,
+  NAME_FIRST_CHAR_PATTERN,
+  NAME_REST_CHAR_PATTERN,
   isValidName,
 } from "./naming.js"
 
@@ -34,14 +35,7 @@ function isWhitespace(ch: string): boolean {
  * @returns 識別子文字であればtrue
  */
 function isIdentChar(ch: string): boolean {
-  const c = ch.charCodeAt(0)
-  return (
-    (c >= 65 && c <= 90) || // 英大文字
-    (c >= 97 && c <= 122) || // 英小文字
-    (c >= 48 && c <= 57) || // 数字
-    c === 95 || // _
-    c === 45 // -
-  )
+  return NAME_REST_CHAR_PATTERN.test(ch)
 }
 
 // Note: use isIdentStartChar for the first character and isIdentChar for subsequent ones to enforce NAME_PATTERN.
@@ -54,8 +48,7 @@ function isIdentChar(ch: string): boolean {
  * @returns 識別子先頭文字であればtrue
  */
 function isIdentStartChar(ch: string): boolean {
-  const c = ch.charCodeAt(0)
-  return (c >= 65 && c <= 90) || (c >= 97 && c <= 122)
+  return NAME_FIRST_CHAR_PATTERN.test(ch)
 }
 
 /**
@@ -205,7 +198,7 @@ function readPlaceholder(input: string, pos: number): [value: string, newPos: nu
   pos++ // $ をスキップ
 
   const nameStart = pos
-  while (pos < len && PLACEHOLDER_CHAR_PATTERN.test(input[pos])) pos++
+  while (pos < len && NAME_REST_CHAR_PATTERN.test(input[pos])) pos++
   const name = input.slice(nameStart, pos)
 
   if (!isValidName(name)) {
