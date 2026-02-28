@@ -363,6 +363,33 @@ test("schema element node: accepts self-closing node with empty children", () =>
   )
 })
 
+// 不正な属性名（英字で始まらない）は ElementNodeSchema で拒否されることを確認する
+test("schema element node: rejects invalid attribute names", () => {
+  const invalidAttrNameArb = fc.oneof(
+    fc.stringMatching(/^[0-9][A-Za-z0-9_-]{0,9}$/),
+    fc.stringMatching(/^_[A-Za-z0-9_-]{0,9}$/),
+  )
+
+  fc.assert(
+    fc.property(
+      tagNameArb,
+      invalidAttrNameArb,
+      flatAttributeValueArb,
+      (tagName, badAttr, value) => {
+        const result = ElementNodeSchema.safeParse({
+          type: "element",
+          tagName,
+          decorations: [],
+          attributes: { [badAttr]: value },
+          children: [],
+          selfClosing: true,
+        })
+        assert.isFalse(result.success)
+      },
+    ),
+  )
+})
+
 // --- DocumentNode関連 ---
 
 // 有効なDocumentNodeはバリデーション成功することを確認する
