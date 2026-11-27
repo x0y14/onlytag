@@ -87,7 +87,7 @@ export const NormalizedOptionsSchema = z
       validateTags(data.tags)
     } catch (error) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: (error as Error).message,
         path: ["tags"],
       })
