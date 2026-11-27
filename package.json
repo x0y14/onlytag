@@ -10,15 +10,15 @@
     "tags",
     "tokenizer"
   ],
+  "homepage": "https://github.com/x0y14/onlytag#readme",
+  "bugs": {
+    "url": "https://github.com/x0y14/onlytag/issues"
+  },
   "license": "MIT",
   "author": "Yuhei Yamauchi",
   "repository": {
     "type": "git",
     "url": "https://github.com/x0y14/onlytag.git"
-  },
-  "homepage": "https://github.com/x0y14/onlytag#readme",
-  "bugs": {
-    "url": "https://github.com/x0y14/onlytag/issues"
   },
   "files": [
     "dist",
@@ -55,7 +55,7 @@
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.18",
     "fast-check": "^4.5.3",
-    "oxfmt": "^0.35.0",
+    "oxfmt": "^0.80.0",
     "oxlint": "^1.50.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
