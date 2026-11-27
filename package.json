@@ -10,15 +10,15 @@
     "tags",
     "tokenizer"
   ],
+  "homepage": "https://github.com/x0y14/onlytag#readme",
+  "bugs": {
+    "url": "https://github.com/x0y14/onlytag/issues"
+  },
   "license": "MIT",
   "author": "Yuhei Yamauchi",
   "repository": {
     "type": "git",
     "url": "https://github.com/x0y14/onlytag.git"
-  },
-  "homepage": "https://github.com/x0y14/onlytag#readme",
-  "bugs": {
-    "url": "https://github.com/x0y14/onlytag/issues"
   },
   "files": [
     "dist",
@@ -50,7 +50,7 @@
     "prepublishOnly": "pnpm run clean && pnpm run build && pnpm run lint && pnpm run typecheck && pnpm run test && npm --cache .npm-cache pack --dry-run"
   },
   "dependencies": {
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.18",
