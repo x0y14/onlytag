@@ -10,10 +10,7 @@ import type {
 import type { Options, NormalizedOptions, TagDelimiterPair } from "./types.js"
 import { normalizeOptions } from "./types.js"
 import { decodeJsonString, encodeJsonValue } from "./utils.js"
-import {
-  NAME_PATTERN,
-  NAME_FORMAT,
-} from "./naming.js"
+import { NAME_PATTERN, NAME_FORMAT } from "./naming.js"
 
 // --- tokenize 内部ヘルパー ---
 
@@ -246,10 +243,7 @@ function readJsonValue(
 
   // 構造化値（文字列・オブジェクト・配列）の直後が境界でなければエラー
   if (!isJsonBoundary(input, end, closing, extraBoundaries)) {
-    tokenError(
-      `invalid json attribute value: expected=<boundary>, actual=<${input[end]}>`,
-      end,
-    )
+    tokenError(`invalid json attribute value: expected=<boundary>, actual=<${input[end]}>`, end)
   }
 
   const candidate = input.slice(pos, end)
@@ -515,10 +509,7 @@ function tokenize(input: string, options: NormalizedOptions): Token[] {
         continue
       } else if (isIdentChar(ch)) {
         // 先頭が英字でない識別子文字（数字・_・-）はエラー
-        tokenError(
-          `invalid identifier start: expected=<${NAME_FORMAT}>, actual=<${ch}>`,
-          start,
-        )
+        tokenError(`invalid identifier start: expected=<${NAME_FORMAT}>, actual=<${ch}>`, start)
       }
 
       tokenError(`invalid token character: expected=<identifier|syntax-token>, actual=<${ch}>`, pos)
@@ -648,10 +639,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
   function parseElement(): ElementNode {
     nestingDepth++
     if (nestingDepth > options.maxNestingDepth) {
-      parseError(
-        `nesting depth exceeded: max=${options.maxNestingDepth}`,
-        peek().position,
-      )
+      parseError(`nesting depth exceeded: max=${options.maxNestingDepth}`, peek().position)
     }
 
     /** デリミタペアのインデックスを人間が読める文字列に変換する */
@@ -706,10 +694,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           )
         }
         if (decorationSet.has(decoName)) {
-          parseError(
-            `duplicate decoration: name="${decoName}"`,
-            deco.position,
-          )
+          parseError(`duplicate decoration: name="${decoName}"`, deco.position)
         }
         decorationSet.add(decoName)
         decorations.push(decoName)
@@ -726,10 +711,7 @@ function parse(tokens: Token[], options: NormalizedOptions): DocumentNode {
           parseError(`attributes are not allowed: found attribute "${attrName}"`, peek().position)
         }
         if (attributeSet.has(attrName)) {
-          parseError(
-            `duplicate attribute: name="${attrName}"`,
-            attrToken.position,
-          )
+          parseError(`duplicate attribute: name="${attrName}"`, attrToken.position)
         }
         attributeSet.add(attrName)
         expect("EQUALS")
@@ -942,5 +924,4 @@ export class onlytag {
   dump(doc: DocumentNode): string {
     return JSON.stringify(doc)
   }
-
 }

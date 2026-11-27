@@ -89,7 +89,9 @@ const bothInputArb = fc
     fc.array(attributeArb, { minLength: 1, maxLength: 2 }),
   )
   .filter(([, , attrs]) => deduplicateAttrs(attrs).length >= 1)
-  .map(([tag, decos, attrs]) => `<${tag} ${decos.join(" ")} ${deduplicateAttrs(attrs).join(" ")} />`)
+  .map(
+    ([tag, decos, attrs]) => `<${tag} ${decos.join(" ")} ${deduplicateAttrs(attrs).join(" ")} />`,
+  )
 
 /** カテゴリ E: placeholder のみ */
 const placeholderOnlyInputArb = fc

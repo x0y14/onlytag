@@ -12,7 +12,6 @@ Tags in onlytag support the following concepts:
 - **Group** — parenthesized list of values with `(v1, v2, ...)` syntax
 - **Custom Delimiter** — define your own delimiter pairs instead of the default `<>`
 
-
 ## Quick Start
 
 ```sh
@@ -47,11 +46,11 @@ console.log(ot.dump(doc))
 
 A tag is the fundamental unit of structure. There are three forms:
 
-| Form | Syntax | Description |
-|---|---|---|
-| Opening | `<TagName>` | Begins an element that contains children |
-| Closing | `</TagName>` | Ends the matching opening tag |
-| Self-closing | `<TagName />` | A complete element with no children |
+| Form         | Syntax        | Description                              |
+| ------------ | ------------- | ---------------------------------------- |
+| Opening      | `<TagName>`   | Begins an element that contains children |
+| Closing      | `</TagName>`  | Ends the matching opening tag            |
+| Self-closing | `<TagName />` | A complete element with no children      |
 
 All identifiers (tag names, attribute keys, decoration names, placeholder names) follow the same naming rule: they must start with a letter and may contain letters, digits, underscores, and hyphens (`[a-zA-Z][a-zA-Z0-9_-]*`). Tag names are case-sensitive.
 
@@ -71,14 +70,14 @@ Attributes attach data to a tag using `key=value` syntax. The key follows the sa
 
 **JSON values** — any valid JSON literal:
 
-| Type | Example |
-|---|---|
-| String | `name="Lumina"` |
-| Number | `level=42` |
-| Boolean | `active=true` |
-| Null | `slot=null` |
-| Object | `config={"key": "value"}` |
-| Array | `items=[1, 2, 3]` |
+| Type    | Example                   |
+| ------- | ------------------------- |
+| String  | `name="Lumina"`           |
+| Number  | `level=42`                |
+| Boolean | `active=true`             |
+| Null    | `slot=null`               |
+| Object  | `config={"key": "value"}` |
+| Array   | `items=[1, 2, 3]`         |
 
 **Placeholder** — a symbolic reference written as `$name`:
 
@@ -161,16 +160,16 @@ Whitespace inside JSON string attribute values (e.g., `name="hello world"`) is p
 
 The `onlytag` constructor accepts an optional `Options` object to control which features are allowed:
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `allowDecorations` | `boolean` | `true` | Allow `.name` decoration syntax |
-| `allowAttributes` | `boolean` | `true` | Allow `key=value` attribute syntax |
-| `allowPlaceholders` | `boolean` | `true` | Allow `$name` placeholder values |
-| `allowGroup` | `boolean` | `true` | Allow `(v1, v2, ...)` group values |
-| `allowMixedDelimiters` | `boolean` | `true` | Allow the same tag name to use different delimiter pairs |
-| `allowInconsistentClosures` | `boolean` | `true` | Allow a tag name to be used as both self-closing and open/close |
-| `tags` | `TagDelimiterPair[]` | `[{ opening: "<", closing: ">" }]` | Active delimiter pairs |
-| `maxNestingDepth` | `number` | `1024` | Maximum nesting depth for elements |
+| Option                      | Type                 | Default                            | Description                                                     |
+| --------------------------- | -------------------- | ---------------------------------- | --------------------------------------------------------------- |
+| `allowDecorations`          | `boolean`            | `true`                             | Allow `.name` decoration syntax                                 |
+| `allowAttributes`           | `boolean`            | `true`                             | Allow `key=value` attribute syntax                              |
+| `allowPlaceholders`         | `boolean`            | `true`                             | Allow `$name` placeholder values                                |
+| `allowGroup`                | `boolean`            | `true`                             | Allow `(v1, v2, ...)` group values                              |
+| `allowMixedDelimiters`      | `boolean`            | `true`                             | Allow the same tag name to use different delimiter pairs        |
+| `allowInconsistentClosures` | `boolean`            | `true`                             | Allow a tag name to be used as both self-closing and open/close |
+| `tags`                      | `TagDelimiterPair[]` | `[{ opening: "<", closing: ">" }]` | Active delimiter pairs                                          |
+| `maxNestingDepth`           | `number`             | `1024`                             | Maximum nesting depth for elements                              |
 
 When an option is set to `false`, using the corresponding feature throws an error.
 

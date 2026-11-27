@@ -86,26 +86,17 @@ test("security: excessive nesting depth produces controlled error", () => {
 
 // タグ名に日本語が含まれるとtokenize段でエラーになることを確認する
 test("security: Japanese tag name is rejected", () => {
-  assert.throws(
-    () => ot.tokenize("<日本語 />"),
-    /position=/,
-  )
+  assert.throws(() => ot.tokenize("<日本語 />"), /position=/)
 })
 
 // 属性名に絵文字が含まれるとtokenize段でエラーになることを確認する
 test("security: emoji attribute name is rejected", () => {
-  assert.throws(
-    () => ot.tokenize('<A 🔥=1 />'),
-    /position=/,
-  )
+  assert.throws(() => ot.tokenize("<A 🔥=1 />"), /position=/)
 })
 
 // デコレーション名にゼロ幅スペースが含まれるとtokenize段でエラーになることを確認する
 test("security: zero-width space in decoration name is rejected", () => {
-  assert.throws(
-    () => ot.tokenize("<A .\u200Bhidden />"),
-    /position=/,
-  )
+  assert.throws(() => ot.tokenize("<A .\u200Bhidden />"), /position=/)
 })
 
 // --- ReDoS テスト ---
